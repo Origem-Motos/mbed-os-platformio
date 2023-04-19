@@ -19,6 +19,5 @@
 #define MBED_DEVICE_H
 
 #include "objects.h"
-#include "PinNames.h"
 
 #endif

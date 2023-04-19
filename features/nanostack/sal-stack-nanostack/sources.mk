@@ -23,9 +23,6 @@ SRCS += \
 	source/6LoWPAN/ws/ws_mpx_header.c \
 	source/6LoWPAN/ws/ws_neighbor_class.c \
 	source/6LoWPAN/ws/ws_bootstrap.c \
-	source/6LoWPAN/ws/ws_bootstrap_6lbr.c \
-	source/6LoWPAN/ws/ws_bootstrap_ffn.c \
-	source/6LoWPAN/ws/ws_bootstrap_lfn.c \
 	source/6LoWPAN/ws/ws_common.c \
 	source/6LoWPAN/ws/ws_management_api.c \
 	source/6LoWPAN/ws/ws_bbr_api.c \
@@ -37,16 +34,12 @@ SRCS += \
 	source/6LoWPAN/ws/ws_pae_lib.c \
 	source/6LoWPAN/ws/ws_pae_nvm_data.c \
 	source/6LoWPAN/ws/ws_pae_nvm_store.c \
-	source/6LoWPAN/ws/ws_pae_time.c \
 	source/6LoWPAN/ws/ws_pae_timers.c \
-	source/6LoWPAN/ws/ws_pae_key_storage.c \
 	source/6LoWPAN/ws/ws_eapol_relay.c \
 	source/6LoWPAN/ws/ws_eapol_auth_relay.c \
 	source/6LoWPAN/ws/ws_eapol_relay_lib.c \
 	source/6LoWPAN/ws/ws_eapol_pdu.c \
 	source/6LoWPAN/ws/ws_stats.c \
-	source/6LoWPAN/ws/ws_cfg_settings.c \
-	source/6LoWPAN/ws/ws_phy.c \
 	source/BorderRouter/border_router.c \
 	source/Common_Protocols/icmpv6.c \
 	source/Common_Protocols/icmpv6_prefix.c \
@@ -71,7 +64,6 @@ SRCS += \
 	source/libNET/src/net_mle.c \
 	source/libNET/src/net_rpl.c \
 	source/libNET/src/net_load_balance.c \
-	source/libNET/src/net_dns.c \
 	source/libNET/src/ns_net.c \
 	source/libNET/src/socket_api.c \
 	source/libNET/src/multicast_api.c \
@@ -86,8 +78,6 @@ SRCS += \
 	source/MAC/IEEE802_15_4/mac_timer.c \
 	source/MAC/IEEE802_15_4/sw_mac.c \
 	source/MAC/IEEE802_15_4/mac_fhss_callbacks.c \
-	source/MAC/IEEE802_15_4/mac_cca_threshold.c \
-	source/MAC/IEEE802_15_4/mac_mode_switch.c \
 	source/MAC/ethernet/ethernet_mac_api.c \
 	source/MAC/serial/serial_mac_api.c \
 	source/MAC/virtual_rf/virtual_rf_client.c \
@@ -119,16 +109,12 @@ SRCS += \
 	source/Security/protocols/sec_prot_certs.c \
 	source/Security/protocols/key_sec_prot/key_sec_prot.c \
 	source/Security/protocols/eap_tls_sec_prot/auth_eap_tls_sec_prot.c \
-	source/Security/protocols/eap_tls_sec_prot/radius_eap_tls_sec_prot.c \
 	source/Security/protocols/eap_tls_sec_prot/supp_eap_tls_sec_prot.c \
 	source/Security/protocols/eap_tls_sec_prot/eap_tls_sec_prot_lib.c \
 	source/Security/protocols/fwh_sec_prot/auth_fwh_sec_prot.c \
 	source/Security/protocols/fwh_sec_prot/supp_fwh_sec_prot.c \
 	source/Security/protocols/gkh_sec_prot/auth_gkh_sec_prot.c \
 	source/Security/protocols/gkh_sec_prot/supp_gkh_sec_prot.c \
-	source/Security/protocols/radius_sec_prot/radius_client_sec_prot.c \
-	source/Security/protocols/radius_sec_prot/avp_helper.c \
-	source/Security/protocols/msg_sec_prot/msg_sec_prot.c \
 	source/Security/protocols/tls_sec_prot/tls_sec_prot.c \
 	source/Security/protocols/tls_sec_prot/tls_sec_prot_lib.c \
 	source/Security/PANA/eap_protocol.c \
@@ -150,9 +136,8 @@ SRCS += \
 	source/Service_Libs/fhss/fhss_common.c \
 	source/Service_Libs/fhss/channel_functions.c \
 	source/Service_Libs/fhss/channel_list.c \
-	source/Service_Libs/fhss/fhss_test_api.c \
 	source/Service_Libs/fnv_hash/fnv_hash.c \
-	source/Service_Libs/hmac/hmac_md.c \
+	source/Service_Libs/hmac/hmac_sha1.c \
 	source/Service_Libs/ieee_802_11/ieee_802_11.c \
 	source/Service_Libs/nist_aes_kw/nist_aes_kw.c \
 	source/Service_Libs/mac_neighbor_table/mac_neighbor_table.c \
@@ -171,7 +156,6 @@ SRCS += \
 	source/Service_Libs/Trickle/trickle.c \
 	source/Service_Libs/whiteboard/whiteboard.c \
 	source/Service_Libs/pan_blacklist/pan_blacklist.c \
-	source/Service_Libs/random_early_detection/random_early_detection.c \
 	source/6LoWPAN/Thread/thread_management_if.c \
 	source/6LoWPAN/Thread/thread_management_api.c \
 	source/6LoWPAN/Thread/thread_commissioning_api.c \
@@ -212,12 +196,10 @@ SRCS += \
 	source/DHCPv6_client/dhcpv6_client_service.c \
 	source/libDHCPv6/dhcp_service_api.c \
 	source/libDHCPv6/libDHCPv6.c \
-	source/libDHCPv6/libDHCPv6_vendordata.c \
 	source/libDHCPv6/libDHCPv6_server.c \
 	source/Service_Libs/utils/ns_crc.c \
 	source/Service_Libs/utils/isqrt.c \
 	source/Service_Libs/utils/ns_file_system.c \
-	source/Service_Libs/utils/ns_time.c \
 	source/Service_Libs/utils/ns_conf.c \
 	source/Service_Libs/mdns/ns_mdns_api.c \
 	source/Service_Libs/mdns/ns_fnet_port.c \

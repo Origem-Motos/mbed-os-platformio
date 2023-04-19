@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2021, Pelion and affiliates.
+ * Copyright (c) 2015-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +33,10 @@ struct rpl_objective;
 
 /* Descriptor for a RPL neighbour within a DODAG
  *
+ * The neighbour is normally associated with a DODAG Version, but may not be,
+ * if the version has been retired, and we haven't since heard from that
+ * neighbour. In that case dodag_version is NULL.
+ *
  * Note that global address is only needed with downward routes, but I don't
  * think it's worth optimising for an "upward-only" build. (Unless to be a RPL
  * leaf?)
@@ -41,7 +45,7 @@ struct rpl_objective;
  * first in the instance candidate_neighbour list, in order of preference.
  */
 struct rpl_neighbour {
-    rpl_dodag_version_t *dodag_version;     // Back pointer to DODAG Version
+    rpl_dodag_version_t *dodag_version;     // Back pointer to DODAG Version (may be NULL, if not dodag_parent)
     uint8_t ll_address[16];                 // Link-local address (source of DIO)
     uint8_t global_address[16];             // Global address (from DIO RIO)
     bool dodag_parent: 1;                   // This is a DODAG parent (if true, dodag_version may not be NULL)
@@ -52,7 +56,6 @@ struct rpl_neighbour {
     unsigned dodag_pref: 4;                 // Preference indication for DODAG parents (0=best)
     uint8_t dao_path_control;               // Path control bit assignments for DAO parent
     uint8_t old_dao_path_control;
-    uint8_t addr_reg_failures;              // Address registration failure count (missing ACK)
     int8_t interface_id;
     uint8_t g_mop_prf;
     uint8_t dtsn;
@@ -84,11 +87,10 @@ struct rpl_dodag {
     rpl_dodag_conf_t config;                        /* Configuration from DIO */
     uint8_t info_version;                           /* Version for g_mop_prf and config */
     bool root: 1;                                   /* We are the root of this DODAG */
-    bool was_root: 1;                               /* If we have ever been a root in this DODAG */
     bool leaf: 1;                                   /* We are a leaf in this DODAG (by policy) */
     bool have_config: 1;                            /* We have the config */
     bool used: 1;                                   /* We have ever been a member of this DODAG? */
-    uint8_t new_config_advertisment_count;          /* We have advertiment new config at multicasti DIO  max updated value is 0xfe*/
+    uint8_t new_config_advertisment_count;      /* We have advertiment new config at multicasti DIO */
     NS_LIST_HEAD(rpl_dodag_version_t, link) versions; /* List of DODAG versions (newest first) */
     prefix_list_t prefixes;                         /* Prefixes advertised in DIO PIOs */
     rpl_dio_route_list_t routes;                    /* Routes advertised in DIO RIOs*/
@@ -179,8 +181,6 @@ struct rpl_instance {
     bool dao_in_transit: 1;                         /* If we have a DAO in transit */
     bool requested_dao_ack: 1;                      /* If we requested an ACK (so we retry if no ACK, rather than assuming success) */
     bool pending_neighbour_confirmation: 1;         /* if we have not finished address registration state to parent */
-    bool parent_was_selected: 1;
-    bool advertised_dodag_membership_since_last_repair: 1; /* advertised dodag membership since last repair */
     uint8_t poison_count;
     uint8_t repair_dis_count;
     uint16_t repair_dis_timer;
@@ -193,7 +193,7 @@ struct rpl_instance {
     rpl_dodag_version_t *current_dodag_version;     /* Pointer to DODAG version we are a member of (if any) */
     uint16_t current_rank;                          /* Current rank in current DODAG Version */
     uint16_t parent_selection_timer;
-
+    rpl_dodag_version_t *last_advertised_dodag_version; /* Pointer to last DODAG version we advertised */
     trickle_t dio_timer;                            /* Trickle timer for DIO transmission */
     rpl_dao_root_transit_children_list_t root_children;
     rpl_dao_target_list_t dao_targets;              /* List of DAO targets */

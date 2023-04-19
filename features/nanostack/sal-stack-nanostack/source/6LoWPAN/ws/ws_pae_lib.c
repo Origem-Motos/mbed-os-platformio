@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021, Pelion and affiliates.
+ * Copyright (c) 2018-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,18 +22,14 @@
 #include "ns_trace.h"
 #include "nsdynmemLIB.h"
 #include "fhss_config.h"
-#include "ws_management_api.h"
 #include "NWK_INTERFACE/Include/protocol.h"
-#include "6LoWPAN/ws/ws_cfg_settings.h"
 #include "6LoWPAN/ws/ws_config.h"
-#include "Security/protocols/sec_prot_cfg.h"
-#include "6LoWPAN/ws/ws_pae_timers.h"
 #include "Security/kmp/kmp_addr.h"
 #include "Security/kmp/kmp_api.h"
 #include "Security/protocols/sec_prot_certs.h"
 #include "Security/protocols/sec_prot_keys.h"
+#include "6LoWPAN/ws/ws_pae_timers.h"
 #include "6LoWPAN/ws/ws_pae_lib.h"
-#include "6LoWPAN/ws/ws_pae_key_storage.h"
 
 #ifdef HAVE_WS
 
@@ -97,17 +93,6 @@ kmp_api_t *ws_pae_lib_kmp_list_type_get(kmp_list_t *kmp_list, kmp_type_e type)
     return kmp;
 }
 
-kmp_api_t *ws_pae_lib_kmp_list_instance_id_get(kmp_list_t *kmp_list, uint8_t instance_id)
-{
-    ns_list_foreach(kmp_entry_t, cur, kmp_list) {
-        if (kmp_api_instance_id_get(cur->kmp) == instance_id) {
-            return cur->kmp;
-        }
-    }
-
-    return NULL;
-}
-
 void ws_pae_lib_kmp_list_free(kmp_list_t *kmp_list)
 {
     ns_list_foreach_safe(kmp_entry_t, cur, kmp_list) {
@@ -125,16 +110,6 @@ kmp_entry_t *ws_pae_lib_kmp_list_entry_get(kmp_list_t *kmp_list, kmp_api_t *kmp)
     }
 
     return 0;
-}
-
-bool ws_pae_lib_kmp_list_empty(kmp_list_t *kmp_list)
-{
-    return ns_list_is_empty(kmp_list);
-}
-
-uint8_t ws_pae_lib_kmp_list_count(kmp_list_t *kmp_list)
-{
-    return ns_list_count(kmp_list);
 }
 
 void ws_pae_lib_kmp_timer_start(kmp_list_t *kmp_list, kmp_entry_t *entry)
@@ -182,7 +157,7 @@ void ws_pae_lib_supp_list_init(supp_list_t *supp_list)
 
 supp_entry_t *ws_pae_lib_supp_list_add(supp_list_t *supp_list, const kmp_addr_t *addr)
 {
-    supp_entry_t *entry = ns_dyn_mem_temporary_alloc(sizeof(supp_entry_t));
+    supp_entry_t *entry = ns_dyn_mem_alloc(sizeof(supp_entry_t));
 
     if (!entry) {
         return NULL;
@@ -193,23 +168,18 @@ supp_entry_t *ws_pae_lib_supp_list_add(supp_list_t *supp_list, const kmp_addr_t 
     entry->addr.type = KMP_ADDR_EUI_64_AND_IP;
     kmp_address_copy(&entry->addr, addr);
 
-    ns_list_add_to_start(supp_list, entry);
+    ns_list_add_to_end(supp_list, entry);
 
     return entry;
 }
 
-int8_t ws_pae_lib_supp_list_remove(void *instance, supp_list_t *supp_list, supp_entry_t *supp, ws_pae_lib_supp_deleted supp_deleted)
+int8_t ws_pae_lib_supp_list_remove(supp_list_t *supp_list, supp_entry_t *supp)
 {
     ns_list_remove(supp_list, supp);
 
     ws_pae_lib_supp_delete(supp);
 
     ns_dyn_mem_free(supp);
-
-    if (supp_deleted != NULL) {
-        supp_deleted(instance);
-    }
-
     return 0;
 }
 
@@ -227,36 +197,37 @@ supp_entry_t *ws_pae_lib_supp_list_entry_eui_64_get(const supp_list_t *supp_list
 void ws_pae_lib_supp_list_delete(supp_list_t *supp_list)
 {
     ns_list_foreach_safe(supp_entry_t, entry, supp_list) {
-        ws_pae_lib_supp_list_remove(NULL, supp_list, entry, NULL);
+        ws_pae_lib_supp_list_remove(supp_list, entry);
     }
 }
 
-bool ws_pae_lib_supp_list_timer_update(void *instance, supp_list_t *active_supp_list, uint16_t ticks, ws_pae_lib_kmp_timer_timeout timeout, ws_pae_lib_supp_deleted supp_deleted)
+bool ws_pae_lib_supp_list_timer_update(supp_list_t *active_supp_list, supp_list_t *inactive_supp_list, uint16_t ticks, ws_pae_lib_kmp_timer_timeout timeout)
 {
     bool timer_running = false;
 
     ns_list_foreach_safe(supp_entry_t, entry, active_supp_list) {
-        bool running = ws_pae_lib_supp_timer_update(instance, entry, ticks, timeout);
+        bool running = ws_pae_lib_supp_timer_update(entry, ticks, timeout);
         if (running) {
             timer_running = true;
         } else {
-            ws_pae_lib_supp_list_to_inactive(instance, active_supp_list, entry, supp_deleted);
+            ws_pae_lib_supp_list_to_inactive(active_supp_list, inactive_supp_list, entry);
         }
     }
 
     return timer_running;
 }
 
-void ws_pae_lib_supp_list_slow_timer_update(supp_list_t *supp_list, uint16_t seconds)
+void ws_pae_lib_supp_list_slow_timer_update(supp_list_t *supp_list, timer_settings_t *timer_settings, uint16_t seconds)
 {
     ns_list_foreach(supp_entry_t, entry, supp_list) {
-        if (sec_prot_keys_pmk_lifetime_decrement(&entry->sec_keys, seconds)) {
+        if (sec_prot_keys_pmk_lifetime_decrement(&entry->sec_keys, timer_settings->pmk_lifetime, seconds)) {
             tr_info("PMK and PTK expired, eui-64: %s, system time: %"PRIu32"", trace_array(entry->addr.eui_64, 8), protocol_core_monotonic_time / 10);
         }
-        if (sec_prot_keys_ptk_lifetime_decrement(&entry->sec_keys, seconds)) {
+        if (sec_prot_keys_ptk_lifetime_decrement(&entry->sec_keys, timer_settings->ptk_lifetime, seconds)) {
             tr_info("PTK expired, eui-64: %s, system time: %"PRIu32"", trace_array(entry->addr.eui_64, 8), protocol_core_monotonic_time / 10);
         }
     }
+
 }
 
 void ws_pae_lib_supp_init(supp_entry_t *entry)
@@ -265,8 +236,7 @@ void ws_pae_lib_supp_init(supp_entry_t *entry)
     memset(&entry->addr, 0, sizeof(kmp_addr_t));
     memset(&entry->sec_keys, 0, sizeof(sec_prot_keys_t));
     entry->ticks = 0;
-    entry->waiting_ticks = 0;
-    entry->store_ticks = ws_pae_key_storage_storing_interval_get() * 1000;
+    entry->retry_ticks = 0;
     entry->active = true;
     entry->access_revoked = false;
 }
@@ -276,7 +246,7 @@ void ws_pae_lib_supp_delete(supp_entry_t *entry)
     ws_pae_lib_kmp_list_free(&entry->kmp_list);
 }
 
-bool ws_pae_lib_supp_timer_update(void *instance, supp_entry_t *entry, uint16_t ticks, ws_pae_lib_kmp_timer_timeout timeout)
+bool ws_pae_lib_supp_timer_update(supp_entry_t *entry, uint16_t ticks, ws_pae_lib_kmp_timer_timeout timeout)
 {
     // Updates KMP timers and calls timeout callback
     bool keep_timer_running = ws_pae_lib_kmp_timer_update(&entry->kmp_list, ticks, timeout);
@@ -288,31 +258,18 @@ bool ws_pae_lib_supp_timer_update(void *instance, supp_entry_t *entry, uint16_t 
             entry->ticks -= ticks;
         } else {
             entry->ticks = 0;
+            entry->retry_ticks = 0;
         }
     }
 
     // Updates retry timer
-    if (entry->waiting_ticks > ticks) {
-        keep_timer_running = true;
-        entry->waiting_ticks -= ticks;
+    if (entry->retry_ticks > ticks) {
+        entry->retry_ticks -= ticks;
     } else {
-        if (entry->waiting_ticks > 0) {
-            tr_info("Waiting supplicant timeout eui-64: %s", trace_array(entry->addr.eui_64, 8));
+        if (entry->retry_ticks > 0) {
+            tr_info("EAP-TLS max ongoing delay timeout eui-64: %s", trace_array(entry->addr.eui_64, 8));
         }
-        entry->waiting_ticks = 0;
-    }
-
-    if (!instance) {
-        return keep_timer_running;
-    }
-
-    // Updates retry timer
-    if (entry->store_ticks > ticks) {
-        entry->store_ticks -= ticks;
-    } else {
-        tr_info("PAE active entry key storage update timeout");
-        ws_pae_key_storage_supp_write(instance, entry);
-        entry->store_ticks = ws_pae_key_storage_storing_interval_get() * 1000;
+        entry->retry_ticks = 0;
     }
 
     return keep_timer_running;
@@ -321,20 +278,6 @@ bool ws_pae_lib_supp_timer_update(void *instance, supp_entry_t *entry, uint16_t 
 void ws_pae_lib_supp_timer_ticks_set(supp_entry_t *entry, uint32_t ticks)
 {
     entry->ticks = ticks;
-}
-
-void ws_pae_lib_supp_timer_ticks_add(supp_entry_t *entry, uint32_t ticks)
-{
-    entry->ticks += ticks;
-}
-
-bool ws_pae_lib_supp_timer_is_running(supp_entry_t *entry)
-{
-    if (entry->ticks == 0) {
-        return false;
-    }
-
-    return true;
 }
 
 void ws_pae_lib_supp_list_to_active(supp_list_t *active_supp_list, supp_list_t *inactive_supp_list, supp_entry_t *entry)
@@ -355,7 +298,7 @@ void ws_pae_lib_supp_list_to_active(supp_list_t *active_supp_list, supp_list_t *
     entry->addr.type = KMP_ADDR_EUI_64_AND_IP;
 }
 
-void ws_pae_lib_supp_list_to_inactive(void *instance, supp_list_t *active_supp_list, supp_entry_t *entry, ws_pae_lib_supp_deleted supp_deleted)
+void ws_pae_lib_supp_list_to_inactive(supp_list_t *active_supp_list, supp_list_t *inactive_supp_list, supp_entry_t *entry)
 {
     if (!entry->active) {
         return;
@@ -365,35 +308,38 @@ void ws_pae_lib_supp_list_to_inactive(void *instance, supp_list_t *active_supp_l
 
     if (entry->access_revoked) {
         tr_info("Access revoked; deleted, eui-64: %s", trace_array(entry->addr.eui_64, 8));
-        ws_pae_lib_supp_list_remove(instance, active_supp_list, entry, supp_deleted);
+        ws_pae_lib_supp_list_remove(active_supp_list, entry);
         return;
     }
 
-    // Store to key storage
-    ws_pae_key_storage_supp_write(instance, entry);
+    ns_list_remove(active_supp_list, entry);
+    ns_list_add_to_start(inactive_supp_list, entry);
 
-    // Remove supplicant entry
-    ws_pae_lib_supp_list_remove(instance, active_supp_list, entry, supp_deleted);
-    if (supp_deleted) {
-        supp_deleted(instance);
-    }
+    entry->active = false;
+    entry->ticks = 0;
+
+    // Removes relay address data
+    entry->addr.type = KMP_ADDR_EUI_64;
+    entry->addr.port = 0;
+    memset(entry->addr.relay_address, 0, 16);
 }
 
-void ws_pae_lib_supp_list_purge(void *instance, supp_list_t *active_supp_list, uint16_t max_number, uint8_t max_purge, ws_pae_lib_supp_deleted supp_deleted)
+void ws_pae_lib_supp_list_purge(supp_list_t *active_supp_list, supp_list_t *inactive_supp_list, uint16_t max_number, uint8_t max_purge)
 {
     uint16_t active_supp = ns_list_count(active_supp_list);
+    uint16_t inactive_supp = ns_list_count(inactive_supp_list);
 
-    if (active_supp > max_number) {
-        uint16_t remove_count = active_supp - max_number;
+    if (active_supp + inactive_supp > max_number) {
+        uint16_t remove_count = active_supp + inactive_supp - max_number;
         if (max_purge > 0 && remove_count > max_purge) {
             remove_count = max_purge;
         }
 
-        // Remove entries from active list if there are no active KMPs ongoing for the entry
-        ns_list_foreach_safe(supp_entry_t, entry, active_supp_list) {
-            if (remove_count > 0 && ws_pae_lib_kmp_list_empty(&entry->kmp_list)) {
-                tr_info("Active supplicant removed, eui-64: %s", trace_array(kmp_address_eui_64_get(&entry->addr), 8));
-                ws_pae_lib_supp_list_remove(instance, active_supp_list, entry, supp_deleted);
+        // Remove entries from inactive list
+        ns_list_foreach_safe(supp_entry_t, entry, inactive_supp_list) {
+            if (remove_count > 0) {
+                tr_info("Inactive supplicant removed, eui-64: %s", trace_array(kmp_address_eui_64_get(&entry->addr), 8));
+                ws_pae_lib_supp_list_remove(inactive_supp_list, entry);
                 remove_count--;
             } else {
                 break;
@@ -417,88 +363,20 @@ uint16_t ws_pae_lib_supp_list_kmp_count(supp_list_t *supp_list, kmp_type_e type)
     return kmp_count;
 }
 
-bool ws_pae_lib_supp_list_entry_is_in_list(supp_list_t *supp_list, supp_entry_t *searched_entry)
+supp_entry_t *ws_pae_lib_supp_list_entry_retry_timer_get(supp_list_t *supp_list)
 {
-    ns_list_foreach(supp_entry_t, entry, supp_list) {
-        if (entry == searched_entry) {
-            return true;
-        }
-    }
+    supp_entry_t *retry_supp = NULL;
 
-    return false;
-}
-
-kmp_api_t *ws_pae_lib_supp_list_kmp_receive_check(supp_list_t *supp_list, const void *pdu, uint16_t size)
-{
     ns_list_foreach(supp_entry_t, entry, supp_list) {
-        ns_list_foreach(kmp_entry_t, kmp_entry, &entry->kmp_list) {
-            if (kmp_api_receive_check(kmp_entry->kmp, pdu, size)) {
-                return kmp_entry->kmp;
+        // Finds entry with shortest timeout i.e. oldest one
+        if (entry->retry_ticks > 0) {
+            if (!retry_supp || retry_supp->retry_ticks > entry->retry_ticks) {
+                retry_supp = entry;
             }
         }
     }
 
-    return NULL;
-}
-
-int8_t ws_pae_lib_shared_comp_list_init(shared_comp_list_t *comp_list)
-{
-    ns_list_init(comp_list);
-    return 0;
-}
-
-int8_t ws_pae_lib_shared_comp_list_free(shared_comp_list_t *comp_list)
-{
-    ns_list_foreach_safe(shared_comp_entry_t, entry, comp_list) {
-        if (entry->data->delete) {
-            entry->data->delete ();
-        }
-        ns_list_remove(comp_list, entry);
-        ns_dyn_mem_free(entry);
-    }
-    return 0;
-}
-
-int8_t ws_pae_lib_shared_comp_list_add(shared_comp_list_t *comp_list, kmp_shared_comp_t *data)
-{
-    ns_list_foreach(shared_comp_entry_t, entry, comp_list) {
-        if (entry->data == data) {
-            return -1;
-        }
-    }
-
-    shared_comp_entry_t *entry = ns_dyn_mem_alloc(sizeof(shared_comp_entry_t));
-    if (!entry) {
-        return -1;
-    }
-    entry->data = data;
-    ns_list_add_to_end(comp_list, entry);
-
-    return 0;
-}
-
-int8_t ws_pae_lib_shared_comp_list_remove(shared_comp_list_t *comp_list, kmp_shared_comp_t *data)
-{
-    ns_list_foreach(shared_comp_entry_t, entry, comp_list) {
-        if (entry->data == data) {
-            ns_list_remove(comp_list, entry);
-            ns_dyn_mem_free(entry);
-            return 0;
-        }
-    }
-
-    return 0;
-}
-
-int8_t ws_pae_lib_shared_comp_list_timeout(shared_comp_list_t *comp_list, uint16_t ticks)
-{
-    ns_list_foreach(shared_comp_entry_t, entry, comp_list) {
-        if (entry->data->timeout) {
-            entry->data->timeout(ticks);
-        }
-    }
-
-    return 0;
+    return retry_supp;
 }
 
 #endif /* HAVE_WS */

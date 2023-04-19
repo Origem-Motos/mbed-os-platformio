@@ -42,8 +42,6 @@ void MULTIHOMING_SYNCHRONOUS_DNS()
     result_dns_failure = 0;
     result_exp_timeout = 0;
 
-    nsapi_dns_reset();
-
     for (unsigned int i = 0; i < MBED_CONF_APP_DNS_TEST_HOSTS_NUM; i++) {
         SocketAddress address;
 

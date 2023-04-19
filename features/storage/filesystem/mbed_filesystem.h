@@ -23,15 +23,16 @@
 #include "platform/platform.h"
 
 // FileSystem classes
-#include "features/storage/filesystem/FileSystem.h"
-#include "features/storage/filesystem/File.h"
-#include "features/storage/filesystem/Dir.h"
+#include "filesystem/FileSystem.h"
+#include "filesystem/File.h"
+#include "filesystem/Dir.h"
 
 // BlockDevice classes
-#include "features/storage/blockdevice/BlockDevice.h"
-#include "features/storage/blockdevice/ChainingBlockDevice.h"
-#include "features/storage/blockdevice/SlicingBlockDevice.h"
-#include "features/storage/blockdevice/HeapBlockDevice.h"
+#include "BlockDevice.h"
+#include "BlockDevice.h"
+#include "ChainingBlockDevice.h"
+#include "SlicingBlockDevice.h"
+#include "HeapBlockDevice.h"
 
 /** @}*/
 #endif

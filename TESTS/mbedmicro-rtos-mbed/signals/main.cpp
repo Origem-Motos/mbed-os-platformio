@@ -13,10 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#if defined(MBED_RTOS_SINGLE_THREAD) || !defined(MBED_CONF_RTOS_PRESENT)
-#error [NOT_SUPPORTED] Signals test cases require RTOS with multithread to run
-#else
-
 #include "mbed.h"
 #include "greentea-client/test_env.h"
 #include "utest/utest.h"
@@ -24,8 +20,8 @@
 
 using utest::v1::Case;
 
-#if !DEVICE_USTICKER
-#error [NOT_SUPPORTED] UsTicker need to be enabled for this test.
+#if defined(MBED_RTOS_SINGLE_THREAD) || !DEVICE_USTICKER
+#error [NOT_SUPPORTED] test not supported
 #else
 
 #define TEST_STACK_SIZE   512
@@ -397,5 +393,4 @@ int main()
     return !utest::v1::Harness::run(specification);
 }
 
-#endif // !DEVICE_USTICKER
-#endif // defined(MBED_RTOS_SINGLE_THREAD) || !defined(MBED_CONF_RTOS_PRESENT)
+#endif // defined(MBED_RTOS_SINGLE_THREAD) || !DEVICE_USTICKER

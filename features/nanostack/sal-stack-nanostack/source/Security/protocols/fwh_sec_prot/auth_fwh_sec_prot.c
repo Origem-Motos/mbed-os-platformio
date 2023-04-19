@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2021, Pelion and affiliates.
+ * Copyright (c) 2016-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,8 +24,6 @@
 #include "fhss_config.h"
 #include "NWK_INTERFACE/Include/protocol.h"
 #include "6LoWPAN/ws/ws_config.h"
-#include "6LoWPAN/ws/ws_cfg_settings.h"
-#include "Security/protocols/sec_prot_cfg.h"
 #include "Security/kmp/kmp_addr.h"
 #include "Security/kmp/kmp_api.h"
 #include "Security/PANA/pana_eap_header.h"
@@ -36,7 +34,7 @@
 #include "Security/protocols/sec_prot.h"
 #include "Security/protocols/sec_prot_lib.h"
 #include "Security/protocols/fwh_sec_prot/auth_fwh_sec_prot.h"
-#include "Service_Libs/hmac/hmac_md.h"
+#include "Service_Libs/hmac/hmac_sha1.h"
 #include "Service_Libs/nist_aes_kw/nist_aes_kw.h"
 
 #ifdef HAVE_WS
@@ -66,10 +64,24 @@ typedef struct {
     fwh_sec_prot_msg_e            recv_msg;                    /**< Received message */
     uint8_t                       nonce[EAPOL_KEY_NONCE_LEN];  /**< Authenticator nonce */
     uint8_t                       new_ptk[PTK_LEN];            /**< PTK (384 bits) */
-    uint8_t                       remote_eui64[8];             /**< Remote EUI-64 used to calculate PTK */
     void                          *recv_pdu;                   /**< received pdu */
     uint16_t                      recv_size;                   /**< received pdu size */
 } fwh_sec_prot_int_t;
+
+/*Small network setup*/
+#define FWH_SMALL_IMIN 300 // retries done in 30 seconds
+#define FWH_SMALL_IMAX 900 // Largest value 90 seconds
+
+/* Large network setup*/
+#define FWH_LARGE_IMIN 600 // retries done in 60 seconds
+#define FWH_LARGE_IMAX 2400 // Largest value 240 seconds
+
+static trickle_params_t fwh_trickle_params = {
+    .Imin = FWH_SMALL_IMIN,            /* ticks are 100ms */
+    .Imax = FWH_SMALL_IMAX,            /* ticks are 100ms */
+    .k = 0,                /* infinity - no consistency checking */
+    .TimerExpirations = 2
+};
 
 static uint16_t auth_fwh_sec_prot_size(void);
 static int8_t auth_fwh_sec_prot_init(sec_prot_t *prot);
@@ -80,8 +92,7 @@ static int8_t auth_fwh_sec_prot_receive(sec_prot_t *prot, void *pdu, uint16_t si
 static fwh_sec_prot_msg_e auth_fwh_sec_prot_message_get(eapol_pdu_t *eapol_pdu, sec_prot_keys_t *sec_keys);
 static void auth_fwh_sec_prot_state_machine(sec_prot_t *prot);
 
-static int8_t auth_fwh_sec_prot_message_send(sec_prot_t *prot, fwh_sec_prot_msg_e msg, bool retry);
-static int8_t auth_fwh_sec_prot_auth_completed_send(sec_prot_t *prot);
+static int8_t auth_fwh_sec_prot_message_send(sec_prot_t *prot, fwh_sec_prot_msg_e msg);
 static void auth_fwh_sec_prot_timer_timeout(sec_prot_t *prot, uint16_t ticks);
 
 static int8_t auth_fwh_sec_prot_ptk_generate(sec_prot_t *prot, sec_prot_keys_t *sec_keys);
@@ -99,6 +110,18 @@ int8_t auth_fwh_sec_prot_register(kmp_service_t *service)
         return -1;
     }
 
+    return 0;
+}
+
+int8_t auth_fwh_sec_prot_timing_adjust(uint8_t timing)
+{
+    if (timing < 16) {
+        fwh_trickle_params.Imin = FWH_SMALL_IMIN;
+        fwh_trickle_params.Imax = FWH_SMALL_IMAX;
+    } else {
+        fwh_trickle_params.Imin = FWH_LARGE_IMIN;
+        fwh_trickle_params.Imax = FWH_LARGE_IMAX;
+    }
     return 0;
 }
 
@@ -205,7 +228,7 @@ static fwh_sec_prot_msg_e auth_fwh_sec_prot_message_get(eapol_pdu_t *eapol_pdu, 
     return msg;
 }
 
-static int8_t auth_fwh_sec_prot_message_send(sec_prot_t *prot, fwh_sec_prot_msg_e msg, bool retry)
+static int8_t auth_fwh_sec_prot_message_send(sec_prot_t *prot, fwh_sec_prot_msg_e msg)
 {
     fwh_sec_prot_int_t *data = fwh_sec_prot_get(prot);
 
@@ -235,7 +258,7 @@ static int8_t auth_fwh_sec_prot_message_send(sec_prot_t *prot, fwh_sec_prot_msg_
     switch (msg) {
         case FWH_MESSAGE_1: {
             uint8_t pmkid[PMKID_LEN];
-            if (sec_prot_lib_pmkid_generate(prot, pmkid, true, false, NULL) < 0) {
+            if (sec_prot_lib_pmkid_generate(prot, pmkid, true) < 0) {
                 ns_dyn_mem_free(kde_start);
                 return -1;
             }
@@ -267,20 +290,14 @@ static int8_t auth_fwh_sec_prot_message_send(sec_prot_t *prot, fwh_sec_prot_msg_
 
     switch (msg) {
         case FWH_MESSAGE_1:
-            if (!sec_prot_keys_pmk_replay_cnt_increment(prot->sec_keys)) {
-                ns_dyn_mem_free(kde_start);
-                return 1;
-            }
+            sec_prot_keys_pmk_replay_cnt_increment(prot->sec_keys);
             eapol_pdu.msg.key.replay_counter = sec_prot_keys_pmk_replay_cnt_get(prot->sec_keys);
             eapol_pdu.msg.key.key_information.key_ack = true;
             eapol_pdu.msg.key.key_length = EAPOL_KEY_LEN;
             eapol_pdu.msg.key.key_nonce = data->nonce;
             break;
         case FWH_MESSAGE_3:
-            if (!sec_prot_keys_pmk_replay_cnt_increment(prot->sec_keys)) {
-                ns_dyn_mem_free(kde_start);
-                return -1;
-            }
+            sec_prot_keys_pmk_replay_cnt_increment(prot->sec_keys);
             eapol_pdu.msg.key.replay_counter = sec_prot_keys_pmk_replay_cnt_get(prot->sec_keys);
             eapol_pdu.msg.key.key_information.install = true;
             eapol_pdu.msg.key.key_information.key_ack = true;
@@ -302,23 +319,9 @@ static int8_t auth_fwh_sec_prot_message_send(sec_prot_t *prot, fwh_sec_prot_msg_
         return -1;
     }
 
-    tr_info("4WH: %s %s, eui-64: %s", retry ? "retry" : "send",
-            msg == FWH_MESSAGE_1 ? "Message 1" : "Message 3",
-            trace_array(sec_prot_remote_eui_64_addr_get(prot), 8));
+    tr_info("4WH: send %s, eui-64: %s", msg == FWH_MESSAGE_1 ? "Message 1" : "Message 3", trace_array(sec_prot_remote_eui_64_addr_get(prot), 8));
 
     if (prot->send(prot, eapol_pdu_frame, eapol_pdu_size + prot->header_size) < 0) {
-        return -1;
-    }
-
-    return 0;
-}
-
-static int8_t auth_fwh_sec_prot_auth_completed_send(sec_prot_t *prot)
-{
-    uint8_t *eapol_pdu_frame = ns_dyn_mem_temporary_alloc(prot->header_size);
-
-    // Send zero length message to relay which requests LLC to remove EAPOL temporary entry based on EUI-64
-    if (prot->send(prot, eapol_pdu_frame, prot->header_size) < 0) {
         return -1;
     }
 
@@ -328,7 +331,7 @@ static int8_t auth_fwh_sec_prot_auth_completed_send(sec_prot_t *prot)
 static void auth_fwh_sec_prot_timer_timeout(sec_prot_t *prot, uint16_t ticks)
 {
     fwh_sec_prot_int_t *data = fwh_sec_prot_get(prot);
-    sec_prot_timer_timeout_handle(prot, &data->common, &prot->sec_cfg->prot_cfg.sec_prot_trickle_params, ticks);
+    sec_prot_timer_timeout_handle(prot, &data->common, &fwh_trickle_params, ticks);
 }
 
 static void auth_fwh_sec_prot_state_machine(sec_prot_t *prot)
@@ -362,10 +365,10 @@ static void auth_fwh_sec_prot_state_machine(sec_prot_t *prot)
 
             // Sends 4WH Message 1
             sec_prot_lib_nonce_generate(data->nonce);
-            auth_fwh_sec_prot_message_send(prot, FWH_MESSAGE_1, false);
+            auth_fwh_sec_prot_message_send(prot, FWH_MESSAGE_1);
 
             // Start trickle timer to re-send if no response
-            sec_prot_timer_trickle_start(&data->common, &prot->sec_cfg->prot_cfg.sec_prot_trickle_params);
+            sec_prot_timer_trickle_start(&data->common, &fwh_trickle_params);
 
             sec_prot_state_set(prot, &data->common, FWH_STATE_MESSAGE_2);
             break;
@@ -375,7 +378,7 @@ static void auth_fwh_sec_prot_state_machine(sec_prot_t *prot)
             if (sec_prot_result_timeout_check(&data->common)) {
                 // Re-sends 4WH Message 1
                 sec_prot_lib_nonce_generate(data->nonce);
-                auth_fwh_sec_prot_message_send(prot, FWH_MESSAGE_1, true);
+                auth_fwh_sec_prot_message_send(prot, FWH_MESSAGE_1);
             } else {
                 if (data->recv_msg != FWH_MESSAGE_2) {
                     return;
@@ -390,10 +393,10 @@ static void auth_fwh_sec_prot_state_machine(sec_prot_t *prot)
                 }
 
                 // Sends 4WH Message 3
-                auth_fwh_sec_prot_message_send(prot, FWH_MESSAGE_3, false);
+                auth_fwh_sec_prot_message_send(prot, FWH_MESSAGE_3);
 
                 // Start trickle timer to re-send if no response
-                sec_prot_timer_trickle_start(&data->common, &prot->sec_cfg->prot_cfg.sec_prot_trickle_params);
+                sec_prot_timer_trickle_start(&data->common, &fwh_trickle_params);
 
                 sec_prot_state_set(prot, &data->common, FWH_STATE_MESSAGE_4);
             }
@@ -403,7 +406,7 @@ static void auth_fwh_sec_prot_state_machine(sec_prot_t *prot)
         case FWH_STATE_MESSAGE_4:
             if (sec_prot_result_timeout_check(&data->common)) {
                 // Re-sends 4WH Message 3
-                auth_fwh_sec_prot_message_send(prot, FWH_MESSAGE_3, true);
+                auth_fwh_sec_prot_message_send(prot, FWH_MESSAGE_3);
             } else {
                 if (data->recv_msg != FWH_MESSAGE_4) {
                     return;
@@ -411,18 +414,13 @@ static void auth_fwh_sec_prot_state_machine(sec_prot_t *prot)
                 if (auth_fwh_sec_prot_mic_validate(prot) < 0) {
                     return;
                 }
-                // PTK is fresh for installing any GTKs
-                sec_prot_keys_ptk_installed_gtk_hash_clear_all(prot->sec_keys);
-                /* Store the hash for to-be installed GTK as used for the PTK, on 4WH
-                   this stores only the hash in NVM and does not affect otherwise */
-                sec_prot_keys_ptk_installed_gtk_hash_set(prot->sec_keys, true);
+
                 // If GTK was inserted set it valid
                 sec_prot_keys_gtkl_from_gtk_insert_index_set(prot->sec_keys);
                 // Reset PTK mismatch
                 sec_prot_keys_ptk_mismatch_reset(prot->sec_keys);
                 // Update PTK
-                sec_prot_keys_ptk_write(prot->sec_keys, data->new_ptk, prot->sec_cfg->timer_cfg.ptk_lifetime);
-                sec_prot_keys_ptk_eui_64_write(prot->sec_keys, data->remote_eui64);
+                sec_prot_keys_ptk_write(prot->sec_keys, data->new_ptk);
                 sec_prot_state_set(prot, &data->common, FWH_STATE_FINISH);
             }
             break;
@@ -431,11 +429,7 @@ static void auth_fwh_sec_prot_state_machine(sec_prot_t *prot)
             tr_info("4WH: finish, eui-64: %s", trace_array(sec_prot_remote_eui_64_addr_get(prot), 8));
 
             // KMP-FINISHED.indication,
-            if (prot->finished_ind(prot, sec_prot_result_get(&data->common), 0)) {
-                // Authentication completed (all GTKs inserted)
-                auth_fwh_sec_prot_auth_completed_send(prot);
-            }
-
+            prot->finished_ind(prot, sec_prot_result_get(&data->common), 0);
             sec_prot_state_set(prot, &data->common, FWH_STATE_FINISHED);
             break;
 
@@ -457,7 +451,9 @@ static int8_t auth_fwh_sec_prot_ptk_generate(sec_prot_t *prot, sec_prot_keys_t *
     fwh_sec_prot_int_t *data = fwh_sec_prot_get(prot);
 
     uint8_t local_eui64[8];
-    prot->addr_get(prot, local_eui64, data->remote_eui64);
+    uint8_t remote_eui64[8];
+
+    prot->addr_get(prot, local_eui64, remote_eui64);
 
     uint8_t *remote_nonce = data->recv_eapol_pdu.msg.key.key_nonce;
     if (!remote_nonce) {
@@ -466,7 +462,7 @@ static int8_t auth_fwh_sec_prot_ptk_generate(sec_prot_t *prot, sec_prot_keys_t *
     }
 
     uint8_t *pmk = sec_prot_keys_pmk_get(sec_keys);
-    sec_prot_lib_ptk_calc(pmk, local_eui64, data->remote_eui64, data->nonce, remote_nonce, data->new_ptk);
+    sec_prot_lib_ptk_calc(pmk, local_eui64, remote_eui64, data->nonce, remote_nonce, data->new_ptk);
 
     return 0;
 }

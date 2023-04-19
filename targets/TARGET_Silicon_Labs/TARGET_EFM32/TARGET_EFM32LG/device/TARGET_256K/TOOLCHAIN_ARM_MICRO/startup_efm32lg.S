@@ -21,6 +21,11 @@
 ; * CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
 ; *
 ; ******************************************************************************/
+;/*
+;//-------- <<< Use Configuration Wizard in Context Menu >>> ------------------
+;*/
+
+__initial_sp    EQU     0x20008000
 
                 PRESERVE8
                 THUMB
@@ -32,9 +37,8 @@
                 EXPORT  __Vectors
                 EXPORT  __Vectors_End
                 EXPORT  __Vectors_Size
-                IMPORT  |Image$$ARM_LIB_STACK$$ZI$$Limit|
 
-__Vectors       DCD     |Image$$ARM_LIB_STACK$$ZI$$Limit| ; Top of Stack
+__Vectors       DCD     __initial_sp              ; Top of Stack
                 DCD     Reset_Handler             ; Reset Handler
                 DCD     NMI_Handler               ; NMI Handler
                 DCD     HardFault_Handler         ; Hard Fault Handler
@@ -242,5 +246,9 @@ EMU_IRQHandler
                 ENDP
 
                 ALIGN
+
+; User Initial Stack & Heap
+
+                EXPORT  __initial_sp
 
                 END

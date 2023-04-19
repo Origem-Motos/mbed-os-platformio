@@ -13,6 +13,12 @@
 ; *******************************************************************************
 ; */
 
+; <h> Stack Configuration
+;   <o> Stack Size (in Bytes) <0x0-0xFFFFFFFF:8>
+; </h>
+
+__initial_sp    EQU     0x20030000
+
 
                 PRESERVE8
                 THUMB
@@ -21,9 +27,8 @@
 
                 AREA    RESET, DATA, READONLY
                 EXPORT  __Vectors
-                IMPORT  |Image$$ARM_LIB_STACK$$ZI$$Limit|
 
-__Vectors       DCD     |Image$$ARM_LIB_STACK$$ZI$$Limit| ; Top of Stack
+__Vectors       DCD     __initial_sp              ; Top of Stack
                 DCD     Reset_Handler             ; Reset Handler
                 DCD     NMI_Handler               ; NMI Handler
                 DCD     HardFault_Handler         ; Hard Fault Handler

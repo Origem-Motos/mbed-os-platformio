@@ -18,10 +18,6 @@
 #include "unity.h"
 #include "utest.h"
 
-#if !defined(MBED_CONF_RTOS_PRESENT)
-#error [NOT_SUPPORTED] MemoryPool test cases require a RTOS to run.
-#else
-
 using namespace utest::v1;
 
 #define THREAD_STACK_SIZE 512
@@ -670,4 +666,3 @@ int main()
     Harness::run(specification);
 }
 
-#endif // !defined(MBED_CONF_RTOS_PRESENT)

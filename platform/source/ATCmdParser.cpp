@@ -124,6 +124,68 @@ int ATCmdParser::vprintf(const char *format, std::va_list args)
     return i;
 }
 
+int ATCmdParser::vscanf(const char *format, std::va_list args)
+{
+    // Since format is const, we need to copy it into our buffer to
+    // add the line's null terminator and clobber value-matches with asterisks.
+    //
+    // We just use the beginning of the buffer to avoid unnecessary allocations.
+    int i = 0;
+    int offset = 0;
+
+    while (format[i]) {
+        if (format[i] == '%' && format[i + 1] != '%' && format[i + 1] != '*') {
+            _buffer[offset++] = '%';
+            _buffer[offset++] = '*';
+            i++;
+        } else {
+            _buffer[offset++] = format[i++];
+        }
+    }
+
+    // Scanf has very poor support for catching errors
+    // fortunately, we can abuse the %n specifier to determine
+    // if the entire string was matched.
+    _buffer[offset++] = '%';
+    _buffer[offset++] = 'n';
+    _buffer[offset++] = 0;
+
+    // To workaround scanf's lack of error reporting, we actually
+    // make two passes. One checks the validity with the modified
+    // format string that only stores the matched characters (%n).
+    // The other reads in the actual matched values.
+    //
+    // We keep trying the match until we succeed or some other error
+    // derails us.
+    int j = 0;
+
+    while (true) {
+        // Ran out of space
+        if (j + 1 >= _buffer_size - offset) {
+            return false;
+        }
+        // Receive next character
+        int c = getc();
+        if (c < 0) {
+            return -1;
+        }
+        _buffer[offset + j++] = c;
+        _buffer[offset + j] = 0;
+
+        // Check for match
+        int count = -1;
+        sscanf(_buffer + offset, _buffer, &count);
+
+        // We only succeed if all characters in the response are matched
+        if (count == j) {
+            // Store the found results
+            vsscanf(_buffer + offset, format, args);
+            return j;
+        }
+    }
+}
+
+
 // Command parsing with line handling
 bool ATCmdParser::vsend(const char *command, std::va_list args)
 {
@@ -149,7 +211,7 @@ bool ATCmdParser::vsend(const char *command, std::va_list args)
     return true;
 }
 
-int ATCmdParser::vrecvscanf(const char *response, std::va_list args, bool multiline)
+bool ATCmdParser::vrecv(const char *response, std::va_list args)
 {
 restart:
     _aborted = false;
@@ -166,16 +228,10 @@ restart:
 
         while (response && response[i]) {
             if (response[i] == '%' && response[i + 1] != '%' && response[i + 1] != '*') {
-                if ((offset + 2) > _buffer_size) {
-                    return -1;
-                }
                 _buffer[offset++] = '%';
                 _buffer[offset++] = '*';
                 i++;
             } else {
-                if ((offset + 1) > _buffer_size) {
-                    return -1;
-                }
                 _buffer[offset++] = response[i++];
                 // Find linebreaks, taking care not to be fooled if they're in a %[^\n] conversion specification
                 if (response[i - 1] == '\n' && !(i >= 3 && response[i - 3] == '[' && response[i - 2] == '^')) {
@@ -188,9 +244,6 @@ restart:
         // Scanf has very poor support for catching errors
         // fortunately, we can abuse the %n specifier to determine
         // if the entire string was matched.
-        if ((offset + 3) > _buffer_size) {
-            return -1;
-        }
         _buffer[offset++] = '%';
         _buffer[offset++] = 'n';
         _buffer[offset++] = 0;
@@ -206,24 +259,17 @@ restart:
         int j = 0;
 
         while (true) {
-            // Ran out of space
-            if (j + 1 >= _buffer_size - offset) {
-                return -1;
-            }
-
             // If just peeking for OOBs, and at start of line, check
             // readability
             if (!response && j == 0 && !_fh->readable()) {
-                return -1;
+                return false;
             }
-
             // Receive next character
             int c = getc();
             if (c < 0) {
                 debug_if(_dbg_on, "AT(Timeout)\n");
-                return -1;
+                return false;
             }
-
             // Simplify newlines (borrowed from retarget.cpp)
             if ((c == CR && _in_prev != LF) ||
                     (c == LF && _in_prev != CR)) {
@@ -237,30 +283,24 @@ restart:
             } else {
                 _in_prev = c;
             }
-
-            if ((offset + j + 1) > _buffer_size) {
-                return -1;
-            }
             _buffer[offset + j++] = c;
             _buffer[offset + j] = 0;
 
             // Check for oob data
-            if (multiline) {
-                for (struct oob *oob = _oobs; oob; oob = oob->next) {
-                    if ((unsigned)j == oob->len && memcmp(
-                                oob->prefix, _buffer + offset, oob->len) == 0) {
-                        debug_if(_dbg_on, "AT! %s\n", oob->prefix);
-                        _oob_cb_count++;
-                        oob->cb();
+            for (struct oob *oob = _oobs; oob; oob = oob->next) {
+                if ((unsigned)j == oob->len && memcmp(
+                            oob->prefix, _buffer + offset, oob->len) == 0) {
+                    debug_if(_dbg_on, "AT! %s\n", oob->prefix);
+                    _oob_cb_count++;
+                    oob->cb();
 
-                        if (_aborted) {
-                            debug_if(_dbg_on, "AT(Aborted)\n");
-                            return false;
-                        }
-                        // oob may have corrupted non-reentrant buffer,
-                        // so we need to set it up again
-                        goto restart;
+                    if (_aborted) {
+                        debug_if(_dbg_on, "AT(Aborted)\n");
+                        return false;
                     }
+                    // oob may have corrupted non-reentrant buffer,
+                    // so we need to set it up again
+                    goto restart;
                 }
             }
 
@@ -283,10 +323,6 @@ restart:
                 // Store the found results
                 vsscanf(_buffer + offset, _buffer, args);
 
-                if (!multiline) {
-                    return j;
-                }
-
                 // Jump to next line and continue parsing
                 response += i;
                 break;
@@ -301,17 +337,7 @@ restart:
         }
     }
 
-    return 1;
-}
-
-int ATCmdParser::vscanf(const char *format, std::va_list args)
-{
-    return vrecvscanf(format, args, false);
-}
-
-bool ATCmdParser::vrecv(const char *response, std::va_list args)
-{
-    return (vrecvscanf(response, args, true)) > 0 ? true : false;
+    return true;
 }
 
 // Mapping to vararg functions
@@ -328,7 +354,7 @@ int ATCmdParser::scanf(const char *format, ...)
 {
     std::va_list args;
     va_start(args, format);
-    int res = vrecvscanf(format, args, false);
+    int res = vscanf(format, args);
     va_end(args);
     return res;
 }
@@ -346,9 +372,9 @@ bool ATCmdParser::recv(const char *response, ...)
 {
     std::va_list args;
     va_start(args, response);
-    int res = vrecvscanf(response, args, true);
+    bool res = vrecv(response, args);
     va_end(args);
-    return (res > 0) ? true : false;
+    return res;
 }
 
 // oob registration

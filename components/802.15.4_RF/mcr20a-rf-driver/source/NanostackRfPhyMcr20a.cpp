@@ -1,16 +1,15 @@
 /*
- * Copyright (c) 2014-2020, Pelion and affiliates.
+ * Copyright (c) 2014-2015 ARM Limited. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * Licensed under the Apache License, Version 2.0 (the License); you may
+ * not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * distributed under the License is distributed on an AS IS BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -62,7 +61,11 @@ extern "C" {
 #define gCcaCCA_MODE1_c        1
 
 #define gXcvrRunState_d       gXcvrPwrAutodoze_c
+#if !defined(TARGET_KW24D)
 #define gXcvrLowPowerState_d  gXcvrPwrHibernate_c
+#else
+#define gXcvrLowPowerState_d  gXcvrPwrAutodoze_c
+#endif
 
 namespace {
 
@@ -501,7 +504,9 @@ static void rf_init(void)
     /* Disable Tristate on MISO for SPI reads */
     MCR20Drv_IndirectAccessSPIWrite(MISC_PAD_CTRL, 0x02);
     /* Set XCVR clock output settings */
+#if !defined(TARGET_KW24D)
     MCR20Drv_Set_CLK_OUT_Freq(gMCR20_ClkOutFreq_d);
+#endif
     /* Set default XCVR power state */
     rf_set_power_state(gXcvrRunState_d);
 
@@ -1753,7 +1758,7 @@ void NanostackRfPhyMcr20a::_pins_clear()
     irq_thread = NULL;
 }
 
-#if MBED_CONF_MCR20A_PROVIDE_DEFAULT
+#if MBED_CONF_MCR20A_PROVIDE_DEFAULT || TARGET_KW24D
 
 NanostackRfPhy &NanostackRfPhy::get_default_instance()
 {

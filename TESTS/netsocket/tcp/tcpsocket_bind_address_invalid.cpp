@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-#if defined(MBED_CONF_RTOS_PRESENT)
-
 #include "greentea-client/test_env.h"
 #include "mbed.h"
 #include "tcp_tests.h"
@@ -29,16 +27,17 @@ using namespace utest::v1;
 void TCPSOCKET_BIND_ADDRESS_INVALID()
 {
     SKIP_IF_TCP_UNSUPPORTED();
-    TCPSocket sock;
-
-    TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, sock.open(NetworkInterface::get_default_instance()));
+    TCPSocket *sock = new TCPSocket;
+    if (!sock) {
+        TEST_FAIL();
+        return;
+    }
+    TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, sock->open(NetworkInterface::get_default_instance()));
     nsapi_error_t bind_result = NSAPI_ERROR_OK;
     if (get_ip_version() == NSAPI_IPv4) {
-        SocketAddress a("190.2.3.4", 1024);
-        bind_result = sock.bind(a);
+        bind_result = sock->bind("190.2.3.4", 1024);
     } else if (get_ip_version() == NSAPI_IPv6) {
-        SocketAddress a("fe80::ff01", 1024);
-        bind_result = sock.bind(a);
+        bind_result = sock->bind("fe80::ff01", 1024);
     } else {
         TEST_FAIL_MESSAGE("This stack is neither IPv4 nor IPv6");
     }
@@ -47,5 +46,6 @@ void TCPSOCKET_BIND_ADDRESS_INVALID()
     } else {
         TEST_ASSERT_EQUAL(NSAPI_ERROR_PARAMETER, bind_result);
     }
+
+    delete sock;
 }
-#endif // defined(MBED_CONF_RTOS_PRESENT)

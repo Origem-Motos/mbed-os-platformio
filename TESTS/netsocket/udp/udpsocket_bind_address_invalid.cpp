@@ -34,11 +34,9 @@ void UDPSOCKET_BIND_ADDRESS_INVALID()
 
     nsapi_error_t bind_result = NSAPI_ERROR_OK;
     if (get_ip_version() == NSAPI_IPv4) {
-        SocketAddress a("190.2.3.4", 1024);
-        bind_result = sock->bind(a);
+        bind_result = sock->bind("190.2.3.4", 1024);
     } else if (get_ip_version() == NSAPI_IPv6) {
-        SocketAddress a("fe80::ff01", 1024);
-        bind_result = sock->bind(a);
+        bind_result = sock->bind("fe80::ff01", 1024);
     } else {
         TEST_FAIL_MESSAGE("This stack is neither IPv4 nor IPv6");
     }

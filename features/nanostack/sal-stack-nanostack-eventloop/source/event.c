@@ -1,16 +1,15 @@
 /*
- * Copyright (c) 2014-2017, 2019-2021, Pelion and affiliates.
+ * Copyright (c) 2014-2015 ARM Limited. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * Licensed under the Apache License, Version 2.0 (the License); you may
+ * not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * distributed under the License is distributed on an AS IS BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -110,7 +109,6 @@ int8_t eventOS_event_handler_create(void (*handler_func_ptr)(arm_event_s *), uin
     event_tmp->data.receiver = new->id;
     event_tmp->data.sender = 0;
     event_tmp->data.event_type = init_event_type;
-    event_tmp->data.event_id = 0;
     event_tmp->data.event_data = 0;
     event_core_write(event_tmp);
 
@@ -199,9 +197,7 @@ void event_core_free_push(arm_event_storage_t *free)
             timer_sys_event_free(free);
             break;
         case ARM_LIB_EVENT_USER:
-            // *INDENT-OFF*
             // No need set state to UNQUEUED - we forget about it.
-            // *INDENT-ON*
         default:
             break;
     }

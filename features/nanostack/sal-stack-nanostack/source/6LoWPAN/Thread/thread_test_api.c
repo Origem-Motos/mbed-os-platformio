@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2021, Pelion and affiliates.
+ * Copyright (c) 2014-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -70,7 +70,7 @@ int_fast8_t arm_nwk_6lowpan_thread_test_add_neighbour(
     const uint8_t *id_mask,
     const uint8_t *route_data)
 {
-#ifdef HAVE_THREAD_ROUTER
+#ifdef HAVE_THREAD
     protocol_interface_info_entry_t *cur;
     cur = protocol_stack_interface_info_get_by_id(interface_id);
     if (!cur) {
@@ -94,7 +94,7 @@ int_fast8_t arm_nwk_6lowpan_thread_test_remove_neighbour(
     int8_t interface_id,
     uint16_t neighbour_short_addr)
 {
-#ifdef HAVE_THREAD_ROUTER
+#ifdef HAVE_THREAD
     protocol_interface_info_entry_t *cur;
     cur = protocol_stack_interface_info_get_by_id(interface_id);
     if (!cur) {
@@ -643,10 +643,11 @@ int thread_test_version_set(int8_t interface_id, uint8_t version)
 
 int thread_test_pbbr_response_override_set(int8_t interface_id, uint8_t dua_status, uint8_t dua_count, uint8_t ba_failure_count)
 {
-#if defined(HAVE_THREAD) && defined(HAVE_THREAD_V2) && defined(HAVE_THREAD_BORDER_ROUTER)
+#ifdef HAVE_THREAD
     (void)interface_id;
     thread_bbr_commercial_status_override_set(dua_status, dua_count, ba_failure_count);
     return 0;
+
 #else
     (void)interface_id;
     (void)dua_status;
@@ -1220,7 +1221,7 @@ int8_t thread_test_initial_slaac_iid_set(int8_t interface_id, uint8_t *iid)
 
 int8_t thread_test_router_id_request_send(int8_t interface_id, uint8_t status)
 {
-#ifdef HAVE_THREAD_ROUTER
+#ifdef HAVE_THREAD
     protocol_interface_info_entry_t *cur;
 
     cur = protocol_stack_interface_info_get_by_id(interface_id);

@@ -52,7 +52,6 @@ void lp_ticker_init(void)
         gptConfig.clockSource = kGPT_ClockSource_LowFreq;
         gptConfig.enableFreeRun = true;
         gptConfig.enableMode = false;
-        gptConfig.enableRunInDoze = true;
 
         GPT_Init(GPT2, &gptConfig);
         GPT_EnableInterrupts(GPT2, kGPT_OutputCompare1InterruptEnable);
@@ -115,8 +114,7 @@ void lp_ticker_clear_interrupt(void)
 
 void lp_ticker_free(void)
 {
-    GPT_DisableInterrupts(GPT2, kGPT_OutputCompare1InterruptEnable);
-    NVIC_DisableIRQ(GPT2_IRQn);
+
 }
 
 #endif /* DEVICE_LPTICKER */

@@ -22,34 +22,6 @@
 #include "thread_management_if.h"
 #include "ip6string.h"
 #include "mbed_error.h"
-#include "mbed_rtc_time.h"
-
-#if (MBED_CONF_MBED_MESH_API_SYSTEM_TIME_UPDATE_FROM_NANOSTACK == true)
-static uint64_t time_read_callback(void)
-{
-    time_t seconds = time(NULL);
-
-    return (uint64_t)seconds;
-}
-
-static void time_write_callback(uint64_t time_write)
-{
-    set_time((time_t)time_write);
-}
-#endif /* MBED_CONF_MBED_MESH_API_SYSTEM_TIME_UPDATE_FROM_NANOSTACK */
-
-nsapi_error_t Nanostack::Interface::get_ip_address(SocketAddress *address)
-{
-    NanostackLockGuard lock;
-    uint8_t binary_ipv6[16];
-
-    if (arm_net_address_get(interface_id, ADDR_IPV6_GP, binary_ipv6) == 0) {
-        address->set_ip_bytes(binary_ipv6, NSAPI_IPv6);
-        return NSAPI_ERROR_OK;
-    } else {
-        return NSAPI_ERROR_NO_ADDRESS;
-    }
-}
 
 char *Nanostack::Interface::get_ip_address(char *buf, nsapi_size_t buflen)
 {
@@ -76,37 +48,6 @@ char *Nanostack::Interface::get_mac_address(char *buf, nsapi_size_t buflen)
     }
 }
 
-nsapi_error_t Nanostack::Interface::set_mac_address(uint8_t *buf, nsapi_size_t buflen)
-{
-    if (buflen != 8) {
-        /* Provided MAC is too short */
-        return NSAPI_ERROR_PARAMETER;
-    }
-
-    if (_device_id >= 0) {
-        /* device is already registered, can't set MAC address anymore */
-        return NSAPI_ERROR_BUSY;
-    }
-
-    NanostackMACPhy *phy = interface_phy.nanostack_mac_phy();
-    if (phy) {
-        phy->set_mac_address(buf);
-        return NSAPI_ERROR_OK;
-    }
-
-    return NSAPI_ERROR_UNSUPPORTED;
-}
-
-nsapi_error_t Nanostack::Interface::get_netmask(SocketAddress *address)
-{
-    return NSAPI_ERROR_UNSUPPORTED;
-}
-
-nsapi_error_t Nanostack::Interface::get_gateway(SocketAddress *address)
-{
-    return NSAPI_ERROR_UNSUPPORTED;
-}
-
 char *Nanostack::Interface::get_netmask(char *, nsapi_size_t)
 {
     return NULL;
@@ -120,14 +61,6 @@ char *Nanostack::Interface::get_gateway(char *, nsapi_size_t)
 nsapi_connection_status_t Nanostack::Interface::get_connection_status() const
 {
     return _connect_status;
-}
-
-void Nanostack::Interface::get_mac_address(uint8_t *buf) const
-{
-    NanostackMACPhy *phy = interface_phy.nanostack_mac_phy();
-    if (phy) {
-        phy->get_mac_address(buf);
-    }
 }
 
 void Nanostack::Interface::attach(
@@ -145,7 +78,7 @@ Nanostack::Interface::Interface(NanostackPhy &phy) : interface_phy(phy), interfa
 
 InterfaceNanostack::InterfaceNanostack()
     : _interface(NULL),
-      ip_addr(), mac_addr_str(), _blocking(true)
+      ip_addr_str(), mac_addr_str(), _blocking(true)
 {
     // Nothing to do
 }
@@ -157,10 +90,6 @@ int InterfaceNanostack::connect()
         return error;
     }
 
-#if (MBED_CONF_MBED_MESH_API_SYSTEM_TIME_UPDATE_FROM_NANOSTACK == true)
-    mesh_system_time_callback_set(time_read_callback, time_write_callback);
-#endif /* MBED_CONF_MBED_MESH_API_SYSTEM_TIME_UPDATE_FROM_NANOSTACK */
-
     return _interface->bringup(false, NULL, NULL, NULL, IPV6_STACK, _blocking);
 }
 
@@ -171,15 +100,6 @@ int InterfaceNanostack::disconnect()
     }
     return _interface->bringdown();
 }
-
-char *Nanostack::MeshInterface::get_interface_name(char *buf)
-{
-    if (interface_id < 0) {
-        return NULL;
-    }
-    sprintf(buf, "MES%d", interface_id);
-    return buf;
-};
 
 nsapi_error_t MeshInterfaceNanostack::initialize(NanostackRfPhy *phy)
 {
@@ -209,7 +129,6 @@ void Nanostack::Interface::network_handler(mesh_connection_status_t status)
         }
     }
 
-    bool global_up = false;
 
     if (status == MESH_CONNECTED) {
         uint8_t temp_ipv6_global[16];
@@ -220,7 +139,6 @@ void Nanostack::Interface::network_handler(mesh_connection_status_t status)
         if (arm_net_address_get(interface_id, ADDR_IPV6_GP, temp_ipv6_global) == 0
                 && (memcmp(temp_ipv6_global, temp_ipv6_local, 16) != 0)) {
             _connect_status = NSAPI_STATUS_GLOBAL_UP;
-            global_up = true;
         }
     } else if (status == MESH_CONNECTED_LOCAL) {
         _connect_status = NSAPI_STATUS_LOCAL_UP;
@@ -232,9 +150,9 @@ void Nanostack::Interface::network_handler(mesh_connection_status_t status)
         _connect_status = NSAPI_STATUS_DISCONNECTED;
     }
 
-    if (_connection_status_cb && (global_up || (_previous_connection_status != _connect_status
-                                                && (_previous_connection_status != NSAPI_STATUS_GLOBAL_UP || status != MESH_BOOTSTRAP_STARTED)
-                                                && (_previous_connection_status != NSAPI_STATUS_CONNECTING || status != MESH_BOOTSTRAP_START_FAILED)))) {
+    if (_connection_status_cb && _previous_connection_status != _connect_status
+            && (_previous_connection_status != NSAPI_STATUS_GLOBAL_UP || status != MESH_BOOTSTRAP_STARTED)
+            && (_previous_connection_status != NSAPI_STATUS_CONNECTING || status != MESH_BOOTSTRAP_START_FAILED)) {
         _connection_status_cb(NSAPI_EVENT_CONNECTION_STATUS_CHANGE, _connect_status);
     }
     _previous_connection_status = _connect_status;
@@ -259,20 +177,10 @@ Nanostack *InterfaceNanostack::get_stack()
     return &Nanostack::get_instance();
 }
 
-nsapi_error_t InterfaceNanostack::get_ip_address(SocketAddress *address)
-{
-    if (_interface->get_ip_address(address) == NSAPI_ERROR_OK) {
-        ip_addr = address->get_ip_address();
-        return NSAPI_ERROR_OK;
-    }
-
-    return NSAPI_ERROR_NO_ADDRESS;
-}
-
 const char *InterfaceNanostack::get_ip_address()
 {
-    if (_interface->get_ip_address(&ip_addr) == NSAPI_ERROR_OK) {
-        return ip_addr.get_ip_address();
+    if (_interface->get_ip_address(ip_addr_str, sizeof(ip_addr_str))) {
+        return ip_addr_str;
     }
     return NULL;
 }
@@ -283,11 +191,6 @@ const char *InterfaceNanostack::get_mac_address()
         return mac_addr_str;
     }
     return NULL;
-}
-
-nsapi_error_t InterfaceNanostack::set_mac_address(uint8_t *mac_addr, nsapi_size_t addr_len)
-{
-    return _interface->set_mac_address(mac_addr, addr_len);
 }
 
 nsapi_connection_status_t InterfaceNanostack::get_connection_status() const

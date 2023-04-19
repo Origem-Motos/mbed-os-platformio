@@ -64,9 +64,6 @@ public:
      *  @param gateway     Null-terminated representation of the local gateway
      *  @return            0 on success, negative error code on failure
      */
-    virtual nsapi_error_t set_network(const SocketAddress &ip_address, const SocketAddress &netmask, const SocketAddress &gateway);
-
-    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
     virtual nsapi_error_t set_network(const char *ip_address, const char *netmask, const char *gateway);
 
     /** Enable or disable DHCP on the network
@@ -99,34 +96,18 @@ public:
      */
     virtual const char *get_mac_address();
 
-    /** @copydoc NetworkInterface::set_mac_address */
-    virtual nsapi_error_t set_mac_address(uint8_t *mac_addr, nsapi_size_t addr_len);
-
     /** Get the local IP address
      *
      *  @return         Null-terminated representation of the local IP address
      *                  or null if no IP address has been received
      */
-    virtual nsapi_error_t get_ip_address(SocketAddress *address);
-
-    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
     virtual const char *get_ip_address();
-
-    /** Get the IPv6 link local address
-     *
-     *  @address        SocketAddress representation of the link local IPv6 address
-     *  @return         0 on success, negative error code on failure
-     */
-    virtual nsapi_error_t get_ipv6_link_local_address(SocketAddress *address);
 
     /** Get the local network mask
      *
      *  @return         Null-terminated representation of the local network mask
      *                  or null if no network mask has been received
      */
-    virtual nsapi_error_t get_netmask(SocketAddress *address);
-
-    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
     virtual const char *get_netmask();
 
     /** Get the local gateways
@@ -134,9 +115,6 @@ public:
      *  @return         Null-terminated representation of the local gateway
      *                  or null if no network mask has been received
      */
-    virtual nsapi_error_t get_gateway(SocketAddress *address);
-
-    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
     virtual const char *get_gateway();
 
     /** Get the network interface name
@@ -199,12 +177,10 @@ protected:
     OnboardNetworkStack::Interface *_interface;
     bool _dhcp;
     bool _blocking;
-    bool _hw_mac_addr_set;
     char _mac_address[NSAPI_MAC_SIZE];
     char _ip_address[NSAPI_IPv6_SIZE];
     char _netmask[NSAPI_IPv4_SIZE];
     char _gateway[NSAPI_IPv4_SIZE];
-    uint8_t _hw_mac_addr[NSAPI_MAC_BYTES];
     mbed::Callback<void(nsapi_event_t, intptr_t)> _connection_status_cb;
 };
 

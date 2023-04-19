@@ -1,16 +1,15 @@
 /*
- * Copyright (c) 2014-2018, 2020, Pelion and affiliates.
+ * Copyright (c) 2014-2015 ARM Limited. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * Licensed under the Apache License, Version 2.0 (the License); you may
+ * not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * distributed under the License is distributed on an AS IS BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -510,7 +509,9 @@ COMMON_FUNCTIONS_FN uint_fast8_t common_count_leading_zeros(uint8_t value)
 
 COMMON_FUNCTIONS_FN uint_fast8_t common_count_leading_zeros_8(uint8_t value)
 {
-#if defined __GNUC__
+#ifdef  __CC_ARM
+    return value ? __clz((unsigned int) value << 24) : 8;
+#elif defined __GNUC__
     return value ? __builtin_clz((unsigned int) value << 24) : 8;
 #else
     uint_fast8_t cnt = 0;
@@ -535,7 +536,9 @@ COMMON_FUNCTIONS_FN uint_fast8_t common_count_leading_zeros_8(uint8_t value)
 
 COMMON_FUNCTIONS_FN uint_fast8_t common_count_leading_zeros_16(uint16_t value)
 {
-#if defined __GNUC__
+#ifdef  __CC_ARM
+    return value ? __clz((unsigned int) value << 16) : 16;
+#elif defined __GNUC__
     return value ? __builtin_clz((unsigned int) value << 16) : 16;
 #else
     uint_fast8_t cnt = 0;
@@ -564,7 +567,9 @@ COMMON_FUNCTIONS_FN uint_fast8_t common_count_leading_zeros_16(uint16_t value)
 
 COMMON_FUNCTIONS_FN uint_fast8_t common_count_leading_zeros_32(uint32_t value)
 {
-#if defined __GNUC__
+#ifdef  __CC_ARM
+    return __clz(value);
+#elif defined __GNUC__
     return value ? __builtin_clz(value) : 32;
 #else
     uint_fast8_t cnt = 0;

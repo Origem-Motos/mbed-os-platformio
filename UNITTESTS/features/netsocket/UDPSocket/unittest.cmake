@@ -7,7 +7,6 @@ set(unittest-sources
   ../features/netsocket/SocketAddress.cpp
   ../features/netsocket/NetworkStack.cpp
   ../features/netsocket/InternetSocket.cpp
-  ../features/netsocket/InternetDatagramSocket.cpp
   ../features/netsocket/UDPSocket.cpp
   ../features/frameworks/nanostack-libservice/source/libip4string/ip4tos.c
   ../features/frameworks/nanostack-libservice/source/libip6string/ip6tos.c
@@ -19,7 +18,7 @@ set(unittest-sources
 set(unittest-test-sources
   features/netsocket/UDPSocket/test_UDPSocket.cpp
   stubs/Mutex_stub.cpp
-  stubs/mbed_assert_stub.cpp
+  stubs/mbed_assert_stub.c
   stubs/mbed_atomic_stub.c
   stubs/mbed_critical_stub.c
   stubs/equeue_stub.c

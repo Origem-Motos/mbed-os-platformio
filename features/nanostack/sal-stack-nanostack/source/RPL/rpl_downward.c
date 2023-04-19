@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020, Pelion and affiliates.
+ * Copyright (c) 2015-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -91,7 +91,6 @@
 #include "Common_Protocols/icmpv6.h"
 #include "NWK_INTERFACE/Include/protocol.h"
 #include "ipv6_stack/ipv6_routing_table.h"
-#include "Common_Protocols/ip.h"
 
 #include "net_rpl.h"
 #include "RPL/rpl_protocol.h"
@@ -110,14 +109,14 @@ static void rpl_downward_topo_sort_invalidate(rpl_instance_t *instance);
 
 #define DEFAULT_DAO_DELAY 10 /* *100ms ticks = 1s */
 
+//#define MINIMUM_DAO_TARGET_REFRESH (5*60) /* seconds */
+
 /* Bit <n> of the PC mask */
 #define PCBIT(n) (UINT8_C(0x80) >> (n))
 
 /* The PCS mask */
 #define PCSMASK(pcs) ((uint8_t)(0x100 - PCBIT(pcs)))
 
-static bool rpl_instance_push_address_registration(protocol_interface_info_entry_t *interface, rpl_neighbour_t *neighbour, if_address_entry_t *addr);
-static if_address_entry_t *rpl_interface_addr_get(protocol_interface_info_entry_t *interface, const uint8_t addr[16]);
 
 /*
  *                                 0 1 2 3 4 5 6 7
@@ -181,11 +180,11 @@ static void rpl_downward_target_refresh(rpl_dao_target_t *target)
     target->info.non_root.path_lifetime = 0;
 }
 
-bool rpl_instance_parent_selection_ready(rpl_instance_t *instance)
+static bool rpl_instance_parent_selection_ready(rpl_instance_t *instance)
 {
     rpl_neighbour_t *neighbour = ns_list_get_first(&instance->candidate_neighbours);
     if (neighbour && neighbour->dodag_parent &&  neighbour->dao_path_control) {
-        //We have a Primary parent with Dao path control
+        //We have a Primary parent with Dao patha control
         return true;
     }
     return false;
@@ -193,18 +192,20 @@ bool rpl_instance_parent_selection_ready(rpl_instance_t *instance)
 
 void rpl_downward_neighbour_gone(rpl_instance_t *instance, rpl_neighbour_t *neighbour)
 {
-
-    // Currently don't need to do anything - caller is expected to
-    // trigger parent selection, which will do everything required.
-    (void) instance;
-    (void) neighbour;
+    if (neighbour->dao_path_control == 0) {
+        return;
+    }
+    neighbour->old_dao_path_control = neighbour->dao_path_control;
+    neighbour->dao_path_control = 0;
+    rpl_downward_process_dao_parent_changes(instance);
 }
 
 void rpl_downward_process_dao_parent_changes(rpl_instance_t *instance)
 {
+    uint8_t mop = rpl_instance_mop(instance);
     bool storing;
 
-    switch (rpl_instance_mop(instance)) {
+    switch (mop) {
         case RPL_MODE_NON_STORING:
             storing = false;
             break;
@@ -218,7 +219,6 @@ void rpl_downward_process_dao_parent_changes(rpl_instance_t *instance)
 
     bool bits_removed = false;
     uint8_t bits_added = 0;
-
     ns_list_foreach(rpl_neighbour_t, neighbour, &instance->candidate_neighbours) {
         if (neighbour->old_dao_path_control != neighbour->dao_path_control) {
             if (neighbour->old_dao_path_control & ~ neighbour->dao_path_control) {
@@ -230,19 +230,9 @@ void rpl_downward_process_dao_parent_changes(rpl_instance_t *instance)
             }
         }
     }
-
+    tr_debug("removed=%x, added=%x", bits_removed, bits_added);
     if (!(bits_removed || bits_added)) {
         return;
-    }
-
-    tr_debug("removed=%x, added=%x", bits_removed, bits_added);
-
-    ns_list_foreach(rpl_neighbour_t, neighbour, &instance->candidate_neighbours) {
-        if (neighbour->dao_path_control != 0 && neighbour->old_dao_path_control == 0) {
-            //Candidate has become a DAO parent
-            rpl_control_event(instance->domain, RPL_EVENT_DAO_PARENT_ADD);
-            break;
-        }
     }
 
     if (storing) {
@@ -263,8 +253,8 @@ void rpl_downward_process_dao_parent_changes(rpl_instance_t *instance)
                 }
             }
         }
-
-        //Trig DAO allways after change
+        //GENERATE PARENT Update event
+        rpl_control_event(instance->domain, RPL_EVENT_DAO_PARENT_SWITCH);
         rpl_instance_dao_trigger(instance, 0);
     }
 }
@@ -546,7 +536,8 @@ retry:
              */
             ns_list_foreach(rpl_neighbour_t, neighbour, &instance->candidate_neighbours) {
                 if (neighbour->dao_path_control & unassigned_pc) {
-                    *path_control = neighbour->dao_path_control;
+                    unassigned_pc &= neighbour->dao_path_control;
+                    *path_control = unassigned_pc;
                     *parent = neighbour;
                     return target;
                 }
@@ -561,7 +552,14 @@ retry:
             }
         }
 
-        *path_control = target->path_control;
+        /* If looking for a follow-up target, final path control must match */
+        if (t1) {
+            if (unassigned_pc != *path_control) {
+                continue;
+            }
+        } else {
+            *path_control = unassigned_pc;
+        }
         return target;
     }
 
@@ -726,11 +724,7 @@ void rpl_instance_send_dao_update(rpl_instance_t *instance)
         instance->dao_in_transit = false;
         instance->dao_attempt = 0;
         instance->dao_retry_timer = 0;
-        // Primary parent deletion will trigger parent selection
-        // While waiting, leave dao_timer "running" to indicate DAO incomplete
-        // This is checked in rpl_upward_dio_timer to delay initial DIO sending
-        // If we stopped the timer, that code might think DAO registration was complete
-        instance->delay_dao_timer = 0xffff;
+        instance->delay_dao_timer = 0;
         return;
     }
 
@@ -885,24 +879,9 @@ void rpl_instance_send_dao_update(rpl_instance_t *instance)
     instance->requested_dao_ack = need_ack;
     instance->dao_in_transit = true;
     if (instance->dao_attempt < 16) {
-
-        uint32_t delay = rpl_policy_initial_dao_ack_wait(instance->domain, mop);
-        if (delay < dodag->dio_timer_params.Imin) {
-            //Use Imin Based on delay if it is longer than cache retry
-            delay = dodag->dio_timer_params.Imin;
-        }
-        //Multiply Delay by attempt
-        delay = delay << instance->dao_attempt;
-
-        if (delay > 5400) {
-            //MAX base 540 seconds (9min)
-            delay = 5400;
-        }
-
-        // 0.5 - 1.5 *t randomized base delay
-        delay = randLIB_randomise_base(delay, 0x4000, 0xC000);
-
-        instance->dao_retry_timer = delay;
+        uint32_t t = (uint32_t) rpl_policy_initial_dao_ack_wait(instance->domain, mop) << instance->dao_attempt;
+        t = randLIB_randomise_base(t, 0x4000, 0xC000);
+        instance->dao_retry_timer = t <= 0xffff ? t : 0xffff;
     } else {
         instance->dao_retry_timer = 0xffff;
     }
@@ -1559,25 +1538,6 @@ bool rpl_instance_dao_received(rpl_instance_t *instance, const uint8_t src[16], 
 }
 #endif // HAVE_RPL_DAO_HANDLING
 
-static uint16_t rpl_instance_address_registration_start(rpl_instance_t *instance, rpl_dao_target_t *pending_target)
-{
-    rpl_neighbour_t *pref_parent = rpl_instance_preferred_parent(instance);
-    protocol_interface_info_entry_t *interface = protocol_stack_interface_info_get_by_rpl_domain(instance->domain, -1);
-    if (!interface || !pref_parent) {
-        return 1;
-    }
-    if_address_entry_t *address = rpl_interface_addr_get(interface, pending_target->prefix);
-    if (!address) {
-        return 1;
-    }
-    if (!rpl_instance_push_address_registration(interface, pref_parent, address)) {
-        return 1;
-    }
-    tr_debug("Extra Address Confirmation trig...next dao trig 10s");
-    return 100;
-
-}
-
 void rpl_instance_dao_acked(rpl_instance_t *instance, const uint8_t src[16], int8_t interface_id, uint8_t dao_sequence, uint8_t status)
 {
     if (!instance->dao_in_transit || dao_sequence != instance->dao_sequence_in_transit) {
@@ -1609,7 +1569,6 @@ void rpl_instance_dao_acked(rpl_instance_t *instance, const uint8_t src[16], int
     }
 
     bool more_to_do = false;
-    rpl_dao_target_t *pending_target = NULL;
     ns_list_foreach(rpl_dao_target_t, target, &instance->dao_targets) {
         if (target->root) {
             continue;
@@ -1627,14 +1586,12 @@ void rpl_instance_dao_acked(rpl_instance_t *instance, const uint8_t src[16], int
                 target->info.non_root.pc_assigned |= target->info.non_root.pc_assigning;
             } else {
                 target->info.non_root.pc_to_retry |= target->info.non_root.pc_assigning;
-
             }
             target->info.non_root.pc_assigning = 0;
         }
         target->info.non_root.pc_assigned &= target->path_control;
         if (target->info.non_root.pc_assigned != target->path_control) {
             more_to_do = true;
-            pending_target = target;
         } else {
             if (target->published && target->info.non_root.refresh_timer == 0) {
                 uint32_t t;
@@ -1645,10 +1602,11 @@ void rpl_instance_dao_acked(rpl_instance_t *instance, const uint8_t src[16], int
                 } else {
                     t = 0xFFFFFFFF;
                 }
-                if (rpl_policy_minimum_dao_target_refresh() && t > rpl_policy_minimum_dao_target_refresh()) {
-                    // set the minimum target refresh time ranging from 25% to 10% below the value
-                    t = randLIB_randomise_base(rpl_policy_minimum_dao_target_refresh(), 0x6000, 0x7333);
+#ifdef MINIMUM_DAO_TARGET_REFRESH
+                if (t > MINIMUM_DAO_TARGET_REFRESH) {
+                    t = randLIB_randomise_base(MINIMUM_DAO_TARGET_REFRESH, 0x7333, 0x8CCD); /* +/- 10% */
                 }
+#endif
                 target->info.non_root.refresh_timer = t;
                 tr_debug("set rfr to %"PRIu32, t);
             }
@@ -1656,14 +1614,7 @@ void rpl_instance_dao_acked(rpl_instance_t *instance, const uint8_t src[16], int
     }
 
     if (more_to_do) {
-        uint16_t dao_trig_time = 1;
-        if (pending_target && rpl_policy_parent_confirmation_requested()) {
-            //Possible NS ARO trig
-            dao_trig_time = rpl_instance_address_registration_start(instance, pending_target);
-        }
-
-        rpl_instance_dao_trigger(instance, dao_trig_time);
-
+        rpl_instance_dao_trigger(instance, 1);
     } else {
         rpl_control_event(instance->domain, RPL_EVENT_DAO_DONE);
     }
@@ -1685,21 +1636,6 @@ void rpl_instance_dao_request(struct rpl_instance *instance, struct rpl_neighbou
     }
 
     rpl_instance_dao_trigger(instance, 0);
-}
-
-void rpl_instance_dao_timeout(struct rpl_instance *instance, uint16_t seconds)
-{
-    // Forces DAO timeout to happen before given time distributed in given time
-    ns_list_foreach(rpl_dao_target_t, target, &instance->dao_targets) {
-        if (!target->published || target->info.non_root.refresh_timer == 0) {
-            continue;
-        }
-        if (target->info.non_root.refresh_timer < seconds) {
-            continue;
-        }
-        // Shorten the timeout
-        target->info.non_root.refresh_timer = randLIB_get_random_in_range(1, seconds);
-    }
 }
 
 
@@ -1805,52 +1741,6 @@ void rpl_downward_print_instance(rpl_instance_t *instance, route_print_fn_t *pri
     }
 }
 
-uint16_t rpl_downward_route_table_get(rpl_instance_t *instance, uint8_t *prefix, rpl_route_info_t *output_table, uint16_t output_table_len)
-{
-    uint16_t index = 0;
-
-    if (!prefix || !output_table || !output_table_len) {
-        return 0;
-    }
-    if (ns_list_is_empty(&instance->dao_targets)) {
-        return 0;
-    }
-    if (!rpl_instance_am_root(instance)) {
-        // Question should this be available also for non roots in storing mode
-        return 0;
-    }
-
-#ifdef HAVE_RPL_ROOT
-    rpl_downward_compute_paths(instance);
-
-    ns_list_foreach(rpl_dao_target_t, target, &instance->dao_targets) {
-        if (memcmp(target->prefix, prefix, 8) != 0) {
-            continue;
-        }
-
-        if (target->root) {
-            /* Target has root structure
-             * We take the first transit only from table as simple topology is needed
-             */
-            rpl_dao_root_transit_t *transit = ns_list_get_first(&target->info.root.transits);
-            if (transit) {
-                memcpy(output_table->node, &target->prefix[8], 8);
-                memcpy(output_table->parent, &transit->transit[8], 8);
-
-                index++;
-                if (index == output_table_len) {
-                    //table is full
-                    return index;
-                }
-                output_table++;
-            }
-        }
-        /* We dont put non roots to list so border router is not visible as a node in list*/
-    }
-#endif
-    return index;
-}
-
 rpl_dao_target_t *rpl_instance_get_active_target_confirmation(rpl_instance_t *instance)
 {
     ns_list_foreach_safe(rpl_dao_target_t, n, &instance->dao_targets) {
@@ -1880,18 +1770,14 @@ static bool rpl_instance_push_address_registration(protocol_interface_info_entry
 
     aro.status = ARO_SUCCESS;
     aro.present = true;
+    aro.lifetime = (addr->valid_lifetime / 60) + 1;
     memcpy(aro.eui64, interface->mac, 8);
-    aro.lifetime = rpl_policy_address_registration_timeout();
-    if (!aro.lifetime) {
-        aro.lifetime = (addr->valid_lifetime / 60) + 1;
-    }
 
     buffer_t *buf = icmpv6_build_ns(interface, neighbour->ll_address, addr->address, true, false, &aro);
     if (!buf) {
         return false;
     }
-    buf->options.traffic_class = IP_DSCP_CS6 << IP_TCLASS_DSCP_SHIFT;
-    tr_info("Send ARO %s to %s", trace_ipv6(addr->address), trace_ipv6(neighbour->ll_address));
+    tr_debug("Send ARO %s to %s", trace_ipv6(addr->address), trace_ipv6(neighbour->ll_address));
     protocol_push(buf);
     return true;
 }
@@ -1915,24 +1801,13 @@ static void rpl_instance_address_registration_cancel(rpl_instance_t *instance)
 
     instance->wait_response = NULL;
     instance->pending_neighbour_confirmation = false;
-}
-
-static void rpl_instance_address_registration_retry(rpl_dao_target_t *dao_target)
-{
-    dao_target->active_confirmation_state = true; // Active timer is set true so the response_wait_time runs out
-    dao_target->trig_confirmation_state = true;
-    dao_target->response_wait_time = 20; // Wait 20 seconds before retry
+    instance->delay_dao_timer = 0;
 }
 
 void rpl_instance_parent_address_reg_timer_update(rpl_instance_t *instance, uint16_t seconds)
 {
     if (!instance->pending_neighbour_confirmation) {
         return; //No need validate any confirmation
-    }
-
-    if (rpl_instance_am_root(instance)) {
-        rpl_instance_address_registration_cancel(instance);
-        return;
     }
 
     //Verify that we have selected parent and it have a dao path control
@@ -1983,6 +1858,7 @@ void rpl_instance_parent_address_reg_timer_update(rpl_instance_t *instance, uint
         return;
     }
 
+
     if (rpl_instance_push_address_registration(interface, neighbour, address)) {
         instance->wait_response = neighbour;
         dao_target->response_wait_time = 5;
@@ -1990,41 +1866,33 @@ void rpl_instance_parent_address_reg_timer_update(rpl_instance_t *instance, uint
 
 }
 
-bool rpl_instance_address_registration_done(protocol_interface_info_entry_t *interface, rpl_instance_t *instance, rpl_neighbour_t *neighbour, uint8_t status)
+void rpl_instance_address_registration_done(protocol_interface_info_entry_t *interface, rpl_instance_t *instance, rpl_neighbour_t *neighbour, uint8_t status)
 {
+
     if (!instance->pending_neighbour_confirmation) {
-        return false;
+        return;
     }
 
     rpl_dao_target_t *dao_target = rpl_instance_get_active_target_confirmation(instance);
     if (!dao_target || instance->wait_response != neighbour) {
-        return false;
+        return;
     }
 
     tr_debug("Address %s register to %s", trace_ipv6(dao_target->prefix), trace_ipv6(neighbour->ll_address));
 
-    if (status != SOCKET_TX_DONE) {
-        if (neighbour->addr_reg_failures > 0) {
-            // Neighbor should be blacklisted after this.
-            tr_error("Address registration failed delete neighbor");
-            rpl_instance_address_registration_cancel(instance);
-            rpl_delete_neighbour(instance, neighbour);
-            return true;
+    if (status == SOCKET_TX_DONE) {
+        /* State_timer is 1/10 s. Set renewal to 75-85% of lifetime */
+        if_address_entry_t *address = rpl_interface_addr_get(interface, dao_target->prefix);
+        if (address && address->source != ADDR_SOURCE_DHCP) {
+            address->state_timer = (address->preferred_lifetime * randLIB_get_random_in_range(75, 85) / 10);
         }
-        tr_warn("Address registration ACK fail retry selection");
-        neighbour->addr_reg_failures++;
-        rpl_instance_address_registration_retry(dao_target);
-        return false;
+        neighbour->confirmed = true;
+        dao_target->response_wait_time = 6;
+    } else {
+        tr_error("Address registration failed");
+        rpl_delete_neighbour(instance, neighbour);
+        rpl_instance_address_registration_cancel(instance);
     }
-    /* State_timer is 1/10 s. Set renewal to 75-85% of lifetime */
-    if_address_entry_t *address = rpl_interface_addr_get(interface, dao_target->prefix);
-    if (address && address->source != ADDR_SOURCE_DHCP) {
-        address->state_timer = (address->preferred_lifetime * randLIB_get_random_in_range(75, 85) / 10);
-    }
-    neighbour->addr_reg_failures = 0;
-    neighbour->confirmed = true;
-    dao_target->response_wait_time = 6;
-    return false;
 }
 
 #endif /* HAVE_RPL */

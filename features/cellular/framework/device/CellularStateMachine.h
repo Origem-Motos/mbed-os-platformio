@@ -22,11 +22,9 @@
 #include "CellularCommon.h"
 #include "PlatformMutex.h"
 
-#ifdef MBED_CONF_RTOS_PRESENT
 namespace rtos {
 class Thread;
 }
-#endif
 
 namespace mbed {
 
@@ -161,12 +159,6 @@ private:
     void send_event_cb(cellular_connection_status_t status);
     void change_timeout(const int &timeout);
 
-private:
-
-#ifdef MBED_CONF_RTOS_PRESENT
-    rtos::Thread *_queue_thread;
-#endif
-
     CellularDevice &_cellularDevice;
     CellularState _state;
     CellularState _next_state;
@@ -176,6 +168,7 @@ private:
 
     CellularNetwork &_network;
     events::EventQueue &_queue;
+    rtos::Thread *_queue_thread;
 
     const char *_sim_pin;
     int _retry_count;

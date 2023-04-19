@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, 2020, Pelion and affiliates.
+ * Copyright (c) 2014-2017, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,8 +24,7 @@
 #ifndef MAC_FILTER_H_
 #define MAC_FILTER_H_
 
-struct mac_fcf_sequence_s;
-struct arm_pd_sap_generic_ind_s;
+struct mac_pre_parsed_frame_s;
 
 /**
  * Modify the link quality values.
@@ -42,6 +41,6 @@ struct arm_pd_sap_generic_ind_s;
  * return >0 Packet is ignored.
  * return 0 Packet is not dropped.
  */
-int_fast8_t mac_filter_modify_link_quality(int8_t interface_id, struct mac_fcf_sequence_s *fcf, struct arm_pd_sap_generic_ind_s *mac_frame);
+int_fast8_t mac_filter_modify_link_quality(int8_t interface_id, struct mac_pre_parsed_frame_s *mac_frame);
 
 #endif /* MAC_FILTER_H_ */

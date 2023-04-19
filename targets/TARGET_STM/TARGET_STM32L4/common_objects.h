@@ -38,7 +38,6 @@
 #include "stm32l4xx_ll_lpuart.h"
 #include "stm32l4xx_ll_tim.h"
 #include "stm32l4xx_ll_rtc.h"
-#include "stm32l4xx_ll_pwr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -100,8 +99,6 @@ struct i2c_s {
     int hz;
     PinName sda;
     PinName scl;
-    int sda_func;
-    int scl_func;
     IRQn_Type event_i2cIRQ;
     IRQn_Type error_i2cIRQ;
     uint32_t XferOperation;

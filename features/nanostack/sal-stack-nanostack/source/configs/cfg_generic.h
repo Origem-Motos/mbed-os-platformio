@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016-2019, Pelion and affiliates.
+ * Copyright (c) 2014, 2016-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,5 +32,4 @@
 #define TCP_TEST
 #define THREAD_THCI_SUPPORT
 #define HAVE_WS
-#define HAVE_WS_VERSION_1_1
 #define MLE_TEST

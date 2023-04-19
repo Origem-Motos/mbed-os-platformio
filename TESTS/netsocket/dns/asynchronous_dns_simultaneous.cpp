@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-#if defined(MBED_CONF_RTOS_PRESENT)
-
 #include "mbed.h"
 #include "greentea-client/test_env.h"
 #include "unity.h"
@@ -34,7 +32,6 @@ int result_exp_timeout;
 
 void ASYNCHRONOUS_DNS_SIMULTANEOUS()
 {
-    nsapi_dns_reset();
     do_asynchronous_gethostbyname(dns_test_hosts_second, MBED_CONF_APP_DNS_SIMULT_QUERIES + 1, &result_ok, &result_no_mem,
                                   &result_dns_failure, &result_exp_timeout);
 
@@ -43,4 +40,3 @@ void ASYNCHRONOUS_DNS_SIMULTANEOUS()
     TEST_ASSERT_EQUAL(0, result_dns_failure);
     TEST_ASSERT_EQUAL(0, result_exp_timeout);
 }
-#endif // defined(MBED_CONF_RTOS_PRESENT)

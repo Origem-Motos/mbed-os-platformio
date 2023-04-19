@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2021, Pelion and affiliates.
+ * Copyright (c) 2015-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,9 +40,6 @@ struct fhss_structure {
     int8_t fhss_event_timer;
     uint8_t active_fhss_events;
     uint16_t number_of_channels;
-    uint16_t number_of_uc_channels;
-    uint16_t number_of_bc_channels;
-    uint16_t optimal_packet_length;
     fhss_states fhss_state;
     uint32_t fhss_timeout;
     uint32_t fhss_timer;

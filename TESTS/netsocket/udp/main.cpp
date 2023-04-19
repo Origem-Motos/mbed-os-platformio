@@ -15,10 +15,6 @@
  * limitations under the License.
  */
 
-#if !defined(MBED_CONF_RTOS_PRESENT)
-#error [NOT_SUPPORTED] udp test cases require a RTOS to run.
-#else
-
 #define WIFI 2
 #if !defined(MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE) || \
     (MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == WIFI && !defined(MBED_CONF_NSAPI_DEFAULT_WIFI_SSID))
@@ -31,7 +27,6 @@
 #include "utest.h"
 #include "utest/utest_stack_trace.h"
 #include "udp_tests.h"
-#include "ip6string.h"
 
 #ifndef ECHO_SERVER_ADDR
 #error [NOT_SUPPORTED] Requires parameters for echo server
@@ -64,30 +59,20 @@ static void _ifup()
     NetworkInterface *net = NetworkInterface::get_default_instance();
     nsapi_error_t err = net->connect();
     TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, err);
-    SocketAddress address;
-    net->get_ip_address(&address);
-
-#define MESH 3
-#if MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == MESH
-    printf("Waiting for GLOBAL_UP\n");
-    while (net->get_connection_status() != NSAPI_STATUS_GLOBAL_UP) {
-        ThisThread::sleep_for(500);
-    }
-#endif
-    printf("MBED: UDPClient IP address is '%s'\n", address ? address.get_ip_address() : "null");
+    printf("MBED: UDPClient IP address is '%s'\n", net->get_ip_address() ? net->get_ip_address() : "null");
 }
 
 static void _ifdown()
 {
     NetworkInterface::get_default_instance()->disconnect();
-    tr_info("MBED: ifdown");
+    printf("MBED: ifdown\n");
 }
 
 
 nsapi_version_t get_ip_version()
 {
     SocketAddress test;
-    if (NetworkInterface::get_default_instance()->get_ip_address(&test) != NSAPI_ERROR_OK) {
+    if (!test.set_ip_address(NetworkInterface::get_default_instance()->get_ip_address())) {
         return NSAPI_UNSPEC;
     }
     return test.get_ip_version();
@@ -187,10 +172,13 @@ Case cases[] = {
     Case("UDPSOCKET_OPEN_TWICE", UDPSOCKET_OPEN_TWICE),
     Case("UDPSOCKET_BIND_PORT", UDPSOCKET_BIND_PORT),
     Case("UDPSOCKET_BIND_PORT_FAIL", UDPSOCKET_BIND_PORT_FAIL),
+    Case("UDPSOCKET_BIND_ADDRESS_PORT", UDPSOCKET_BIND_ADDRESS_PORT),
+    Case("UDPSOCKET_BIND_ADDRESS_NULL", UDPSOCKET_BIND_ADDRESS_NULL),
     Case("UDPSOCKET_BIND_ADDRESS_INVALID", UDPSOCKET_BIND_ADDRESS_INVALID),
     Case("UDPSOCKET_BIND_ADDRESS", UDPSOCKET_BIND_ADDRESS),
     Case("UDPSOCKET_BIND_WRONG_TYPE", UDPSOCKET_BIND_WRONG_TYPE),
     Case("UDPSOCKET_BIND_UNOPENED", UDPSOCKET_BIND_UNOPENED),
+    Case("UDPSOCKET_SENDTO_INVALID", UDPSOCKET_SENDTO_INVALID),
     Case("UDPSOCKET_ECHOTEST_NONBLOCK", UDPSOCKET_ECHOTEST_NONBLOCK),
     Case("UDPSOCKET_ECHOTEST_BURST_NONBLOCK", UDPSOCKET_ECHOTEST_BURST_NONBLOCK),
     Case("UDPSOCKET_SENDTO_REPEAT", UDPSOCKET_SENDTO_REPEAT),
@@ -216,4 +204,3 @@ int main()
 
 #endif // ECHO_SERVER_ADDR
 #endif // !defined(MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE) || (MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == WIFI && !defined(MBED_CONF_NSAPI_DEFAULT_WIFI_SSID))
-#endif // !defined(MBED_CONF_RTOS_PRESENT)

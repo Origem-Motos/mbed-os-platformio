@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2021, Pelion and affiliates.
+ * Copyright (c) 2013-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,19 +74,11 @@
 #include "6LoWPAN/Fragmentation/cipv6_fragmenter.h"
 #include "Service_Libs/etx/etx.h"
 #include "Service_Libs/mac_neighbor_table/mac_neighbor_table.h"
-#include "6LoWPAN/ws/ws_common.h"
-#ifdef HAVE_WS
-#include "6LoWPAN/ws/ws_cfg_settings.h"
-#endif
+#include "6LoWPAN/ws/ws_bootstrap.h"
+
 
 #define TRACE_GROUP_LOWPAN "6lo"
 #define TRACE_GROUP "6lo"
-
-/* Data rate for application used in Stagger calculation */
-#define STAGGER_DATARATE_FOR_APPL(n) ((n)*75/100)
-
-/* Time after network is considered stable and smaller stagger values can be given*/
-#define STAGGER_STABLE_NETWORK_TIME 3600*4
 
 #ifdef HAVE_RPL
 rpl_domain_t *protocol_6lowpan_rpl_domain;
@@ -118,15 +110,12 @@ static uint8_t protocol_buffer_valid(buffer_t *b, protocol_interface_info_entry_
 
 void protocol_init(void)
 {
-    tr_debug("P.Init");
+    tr_debug("P.Init\n");
 #ifdef PANA
     sec_libray_init();
 #endif
 #ifdef HAVE_RPL
     protocol_6lowpan_rpl_domain = rpl_control_create_domain();
-#endif
-#ifdef HAVE_WS
-    ws_cfg_settings_init();
 #endif
 }
 
@@ -134,7 +123,7 @@ void protocol_6lowpan_stack(buffer_t *b)
 {
     protocol_interface_info_entry_t *cur = b->interface;
     if (protocol_buffer_valid(b, cur) == 0) {
-        tr_debug("Drop Packets");
+        tr_debug("Drop Packets\n");
         buffer_free(b);
         return;
     }
@@ -230,7 +219,7 @@ void protocol_6lowpan_stack(buffer_t *b)
                     b = tcp_up(b);
                     break;
                 default:
-                    tr_debug("LLL");
+                    tr_debug("LLL\n");
                     b = buffer_free(b);
                     break;
             }
@@ -519,7 +508,7 @@ uint16_t protocol_6lowpan_neighbor_priority_set(int8_t interface_id, addrtype_t 
         }
 
         if (new_primary) {
-            ws_common_primary_parent_update(cur, entry);
+            ws_primary_parent_update(cur, entry);
         }
         return 1;
     } else {
@@ -552,7 +541,7 @@ uint16_t protocol_6lowpan_neighbor_second_priority_set(int8_t interface_id, addr
             protocol_stats_update(STATS_ETX_2ND_PARENT, etx_entry->etx >> 4);
         }
         if (new_secondary) {
-            ws_common_secondary_parent_update(cur);
+            ws_secondary_parent_update(cur);
         }
         return 1;
     } else {
@@ -789,109 +778,4 @@ uint8_t protocol_6lowpan_beacon_compare_rx(int8_t interface_id, uint8_t join_pri
     conn_to_pref = ((256 - join_priority) * (uint16_t) link_quality) >> 8;
 
     return conn_to_pref;
-}
-
-bool protocol_6lowpan_latency_estimate_get(int8_t interface_id, uint32_t *latency)
-{
-    protocol_interface_info_entry_t *cur_interface = protocol_stack_interface_info_get_by_id(interface_id);
-    uint32_t latency_estimate = 0;
-
-    if (!cur_interface) {
-        return false;
-    }
-
-    if (cur_interface->eth_mac_api) {
-        // either PPP or Ethernet interface.
-        latency_estimate = 1000;
-    } else if (thread_info(cur_interface)) {
-        // thread network
-        latency_estimate = 5000;
-    } else if (ws_info(cur_interface)) {
-        latency_estimate = ws_common_latency_estimate_get(cur_interface);
-    } else {
-        // 6LoWPAN ND
-        latency_estimate = 20000;
-    }
-
-    if (latency_estimate != 0) {
-        *latency = latency_estimate;
-        return true;
-    }
-
-    return false;
-}
-
-bool protocol_6lowpan_stagger_estimate_get(int8_t interface_id, uint32_t data_amount, uint16_t *stagger_min, uint16_t *stagger_max, uint16_t *stagger_rand)
-{
-    size_t network_size;
-    uint32_t datarate;
-    uint32_t stagger_value;
-    protocol_interface_info_entry_t *cur_interface = protocol_stack_interface_info_get_by_id(interface_id);
-
-    if (!cur_interface) {
-        return false;
-    }
-
-    if (cur_interface->eth_mac_api) {
-        // either PPP or Ethernet interface.
-        network_size = 1;
-        datarate = 1000000;
-    } else if (thread_info(cur_interface)) {
-        // thread network
-        network_size = 23;
-        datarate = 250000;
-    } else if (ws_info(cur_interface)) {
-        network_size = ws_common_network_size_estimate_get(cur_interface);
-        datarate = ws_common_usable_application_datarate_get(cur_interface);
-    } else {
-        // 6LoWPAN ND
-        network_size = 1000;
-        datarate = 250000;
-    }
-
-    if (data_amount == 0) {
-        // If no data amount given, use 1kB
-        data_amount = 1;
-    }
-    if (datarate < 25000) {
-        // Minimum data rate used in calculations is 25kbs to prevent invalid values
-        datarate = 25000;
-    }
-
-    /*
-     * Do not occupy whole bandwidth, leave space for network formation etc...
-     */
-    if (ws_info(cur_interface) &&
-            (ws_common_connected_time_get(cur_interface) > STAGGER_STABLE_NETWORK_TIME || ws_common_authentication_time_get(cur_interface) == 0)) {
-        // After four hours of network connected full bandwidth is given to application
-        // Authentication has not been required during bootstrap so network load is much smaller
-    } else {
-        // Smaller data rate allowed as we have just joined to the network and Authentication was made
-        datarate = STAGGER_DATARATE_FOR_APPL(datarate);
-    }
-
-    // For small networks sets 10 seconds stagger
-    if (ws_info(cur_interface) && (network_size <= 100 || ws_test_proc_auto_trg(cur_interface))) {
-        stagger_value = 10;
-    } else {
-        stagger_value = 1 + ((data_amount * 1024 * 8 * network_size) / datarate);
-    }
-    /**
-     * Example:
-     * Maximum stagger value to send 1kB to 100 device network using data rate of 50kbs:
-     * 1 + (1 * 1024 * 8 * 100) / (50000*0.25) = 66s
-     */
-
-    *stagger_min = stagger_value / 5;   // Minimum stagger value is 1/5 of the max
-
-    if (stagger_value > 0xFFFF) {
-        *stagger_max = 0xFFFF;
-    } else {
-        *stagger_max = (uint16_t)stagger_value + *stagger_min;
-    }
-
-    // Randomize stagger value
-    *stagger_rand = randLIB_get_random_in_range(*stagger_min, *stagger_max);
-
-    return true;
 }

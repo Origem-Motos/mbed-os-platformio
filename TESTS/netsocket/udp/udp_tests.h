@@ -19,9 +19,6 @@
 #define UDP_TESTS_H
 
 #include "../test_params.h"
-#include "mbed_trace.h"
-
-#define TRACE_GROUP "GRNT"
 
 NetworkInterface *get_interface();
 void drop_bad_packets(UDPSocket &sock, int orig_timeout);
@@ -43,7 +40,7 @@ namespace udp_global {
 #ifdef MBED_GREENTEA_TEST_UDPSOCKET_TIMEOUT_S
 static const int TESTS_TIMEOUT = MBED_GREENTEA_TEST_UDPSOCKET_TIMEOUT_S;
 #else
-static const int TESTS_TIMEOUT = (20 * 60);
+static const int TESTS_TIMEOUT = 480;
 #endif
 
 static const int MAX_SEND_SIZE_IPV4 = 536;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021, Pelion and affiliates.
+ * Copyright (c) 2018-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,8 +24,6 @@
 #include "fhss_config.h"
 #include "NWK_INTERFACE/Include/protocol.h"
 #include "6LoWPAN/ws/ws_config.h"
-#include "6LoWPAN/ws/ws_cfg_settings.h"
-#include "Security/protocols/sec_prot_cfg.h"
 #include "Security/kmp/kmp_addr.h"
 #include "Security/kmp/kmp_api.h"
 #include "Security/PANA/pana_eap_header.h"
@@ -62,6 +60,21 @@ typedef struct {
     uint16_t                      recv_size;        /**< Received pdu size */
 } gkh_sec_prot_int_t;
 
+/*Small network setup*/
+#define GKH_SMALL_IMIN 300 // retries done in 30 seconds
+#define GKH_SMALL_IMAX 900 // Largest value 90 seconds
+
+/* Large network setup*/
+#define GKH_LARGE_IMIN 600 // retries done in 60 seconds
+#define GKH_LARGE_IMAX 2400 // Largest value 240 seconds
+
+static trickle_params_t gkh_trickle_params = {
+    .Imin = GKH_SMALL_IMIN,            /* ticks are 100ms */
+    .Imax = GKH_SMALL_IMAX,            /* ticks are 100ms */
+    .k = 0,                /* infinity - no consistency checking */
+    .TimerExpirations = 2
+};
+
 static uint16_t auth_gkh_sec_prot_size(void);
 static int8_t auth_gkh_sec_prot_init(sec_prot_t *prot);
 
@@ -71,8 +84,7 @@ static int8_t auth_gkh_sec_prot_receive(sec_prot_t *prot, void *pdu, uint16_t si
 static gkh_sec_prot_msg_e auth_gkh_sec_prot_message_get(eapol_pdu_t *eapol_pdu, sec_prot_keys_t *sec_keys);
 static void auth_gkh_sec_prot_state_machine(sec_prot_t *prot);
 
-static int8_t auth_gkh_sec_prot_message_send(sec_prot_t *prot, gkh_sec_prot_msg_e msg, bool retry);
-static int8_t auth_gkh_sec_prot_auth_completed_send(sec_prot_t *prot);
+static int8_t auth_gkh_sec_prot_message_send(sec_prot_t *prot, gkh_sec_prot_msg_e msg);
 static void auth_gkh_sec_prot_timer_timeout(sec_prot_t *prot, uint16_t ticks);
 static int8_t auth_gkh_sec_prot_mic_validate(sec_prot_t *prot);
 
@@ -88,6 +100,18 @@ int8_t auth_gkh_sec_prot_register(kmp_service_t *service)
         return -1;
     }
 
+    return 0;
+}
+
+int8_t auth_gkh_sec_prot_timing_adjust(uint8_t timing)
+{
+    if (timing < 16) {
+        gkh_trickle_params.Imin = GKH_SMALL_IMIN;
+        gkh_trickle_params.Imax = GKH_SMALL_IMAX;
+    } else {
+        gkh_trickle_params.Imin = GKH_LARGE_IMIN;
+        gkh_trickle_params.Imax = GKH_LARGE_IMAX;
+    }
     return 0;
 }
 
@@ -181,7 +205,7 @@ static gkh_sec_prot_msg_e auth_gkh_sec_prot_message_get(eapol_pdu_t *eapol_pdu, 
     return msg;
 }
 
-static int8_t auth_gkh_sec_prot_message_send(sec_prot_t *prot, gkh_sec_prot_msg_e msg, bool retry)
+static int8_t auth_gkh_sec_prot_message_send(sec_prot_t *prot, gkh_sec_prot_msg_e msg)
 {
     uint16_t kde_len = 0;
 
@@ -227,10 +251,7 @@ static int8_t auth_gkh_sec_prot_message_send(sec_prot_t *prot, gkh_sec_prot_msg_
 
     switch (msg) {
         case GKH_MESSAGE_1:
-            if (!sec_prot_keys_pmk_replay_cnt_increment(prot->sec_keys)) {
-                ns_dyn_mem_free(kde_start);
-                return -1;
-            }
+            sec_prot_keys_pmk_replay_cnt_increment(prot->sec_keys);
             eapol_pdu.msg.key.replay_counter = sec_prot_keys_pmk_replay_cnt_get(prot->sec_keys);
             eapol_pdu.msg.key.key_information.key_ack = true;
             eapol_pdu.msg.key.key_information.key_mic = true;
@@ -250,22 +271,9 @@ static int8_t auth_gkh_sec_prot_message_send(sec_prot_t *prot, gkh_sec_prot_msg_
         return -1;
     }
 
-    tr_info("GKH: %s Message 1, eui-64: %s", retry ? "retry" : "send",
-            trace_array(sec_prot_remote_eui_64_addr_get(prot), 8));
+    tr_info("GKH: send Message 1, eui-64: %s", trace_array(sec_prot_remote_eui_64_addr_get(prot), 8));
 
     if (prot->send(prot, eapol_pdu_frame, eapol_pdu_size + prot->header_size) < 0) {
-        return -1;
-    }
-
-    return 0;
-}
-
-static int8_t auth_gkh_sec_prot_auth_completed_send(sec_prot_t *prot)
-{
-    uint8_t *eapol_pdu_frame = ns_dyn_mem_temporary_alloc(prot->header_size);
-
-    // Send zero length message to relay which requests LLC to remove EAPOL temporary entry based on EUI-64
-    if (prot->send(prot, eapol_pdu_frame, prot->header_size) < 0) {
         return -1;
     }
 
@@ -275,7 +283,7 @@ static int8_t auth_gkh_sec_prot_auth_completed_send(sec_prot_t *prot)
 static void auth_gkh_sec_prot_timer_timeout(sec_prot_t *prot, uint16_t ticks)
 {
     gkh_sec_prot_int_t *data = gkh_sec_prot_get(prot);
-    sec_prot_timer_timeout_handle(prot, &data->common, &prot->sec_cfg->prot_cfg.sec_prot_trickle_params, ticks);
+    sec_prot_timer_timeout_handle(prot, &data->common, &gkh_trickle_params, ticks);
 }
 
 static void auth_gkh_sec_prot_state_machine(sec_prot_t *prot)
@@ -300,16 +308,13 @@ static void auth_gkh_sec_prot_state_machine(sec_prot_t *prot)
             // KMP-CREATE.confirm
             prot->create_conf(prot, SEC_RESULT_OK);
 
-            // Sends GKH Message 1
-            auth_gkh_sec_prot_message_send(prot, GKH_MESSAGE_1, false);
+            // Sends 4WH Message 1
+            auth_gkh_sec_prot_message_send(prot, GKH_MESSAGE_1);
 
             // Start trickle timer to re-send if no response
-            sec_prot_timer_trickle_start(&data->common, &prot->sec_cfg->prot_cfg.sec_prot_trickle_params);
+            sec_prot_timer_trickle_start(&data->common, &gkh_trickle_params);
 
             sec_prot_state_set(prot, &data->common, GKH_STATE_MESSAGE_2);
-
-            // Store the hash for to-be installed GTK as used for the PTK
-            sec_prot_keys_ptk_installed_gtk_hash_set(prot->sec_keys, false);
             break;
 
         // Wait GKH message 2
@@ -317,7 +322,7 @@ static void auth_gkh_sec_prot_state_machine(sec_prot_t *prot)
 
             if (sec_prot_result_timeout_check(&data->common)) {
                 // Re-sends GKH Message 1
-                auth_gkh_sec_prot_message_send(prot, GKH_MESSAGE_1, true);
+                auth_gkh_sec_prot_message_send(prot, GKH_MESSAGE_1);
             } else {
                 if (auth_gkh_sec_prot_mic_validate(prot) < 0) {
                     return;
@@ -333,10 +338,7 @@ static void auth_gkh_sec_prot_state_machine(sec_prot_t *prot)
             tr_info("GKH finish, eui-64: %s", trace_array(sec_prot_remote_eui_64_addr_get(prot), 8));
 
             // KMP-FINISHED.indication,
-            if (prot->finished_ind(prot, sec_prot_result_get(&data->common), 0)) {
-                // Authentication completed (all GTKs inserted)
-                auth_gkh_sec_prot_auth_completed_send(prot);
-            }
+            prot->finished_ind(prot, sec_prot_result_get(&data->common), 0);
 
             sec_prot_state_set(prot, &data->common, GKH_STATE_FINISHED);
             break;

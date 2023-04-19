@@ -19,7 +19,7 @@ import sys
 import uuid
 from sys import stdout
 
-class EchoTest(object):
+class EchoTest():
 
     # Test parameters
     TEST_SERIAL_BAUDRATE = 115200

@@ -23,7 +23,7 @@
 #include "greentea-client/test_env.h"
 #include "greentea-client/greentea_serial.h"
 #include "greentea-client/greentea_metrics.h"
-#include "mbed_trace.h"
+
 
 /**
  *   Generic test suite transport protocol keys
@@ -83,10 +83,6 @@ void _GREENTEA_SETUP_COMMON(const int timeout, const char *host_test_name, char 
             break;
         }
     }
-
-#ifdef MBED_CONF_MBED_TRACE_ENABLE
-    mbed_trace_init();
-#endif
 
     greentea_notify_version();
     greentea_notify_timeout(timeout);

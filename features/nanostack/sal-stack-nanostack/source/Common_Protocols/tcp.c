@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2021, Pelion and affiliates.
+ * Copyright (c) 2013-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,7 +82,7 @@ void tcp_test_drop_reset()
 }
 #endif
 
-#if defined(FEA_TRACE_SUPPORT) && MBED_CONF_MBED_TRACE_ENABLE && (MBED_TRACE_MAX_LEVEL >= TRACE_LEVEL_DEBUG)
+#ifdef FEA_TRACE_SUPPORT
 static const char *trace_tcp_flags(uint16_t flags)
 {
     static char buf[9];
@@ -1223,9 +1223,7 @@ buffer_t *tcp_up(buffer_t *buf)
         seg_len++;
     }
 
-#if defined(FEA_TRACE_SUPPORT) && MBED_CONF_MBED_TRACE_ENABLE && (MBED_TRACE_MAX_LEVEL >= TRACE_LEVEL_DEBUG)
     tr_debug("TCP_UP: dst_p=%d, src_p=%d, flags=%s", buf->dst_sa.port, buf->src_sa.port, trace_tcp_flags(flags));
-#endif
     /* clear flags that will be ignored */
     flags &= ~(TCP_FLAG_CWR | TCP_FLAG_ECE | TCP_FLAG_URG);
 

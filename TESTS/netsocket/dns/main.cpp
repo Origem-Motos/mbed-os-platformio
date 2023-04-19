@@ -15,10 +15,6 @@
  * limitations under the License.
  */
 
-#if !defined(MBED_CONF_RTOS_PRESENT)
-#error [NOT_SUPPORTED] dns test cases require a RTOS to run.
-#else
-
 #define WIFI 2
 #if !defined(MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE) || \
     (MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == WIFI && !defined(MBED_CONF_NSAPI_DEFAULT_WIFI_SSID))
@@ -32,7 +28,6 @@
 #include "nsapi_dns.h"
 #include "events/EventQueue.h"
 #include "dns_tests.h"
-#include "ip6string.h"
 
 using namespace utest::v1;
 
@@ -95,20 +90,20 @@ void do_asynchronous_gethostbyname(const char hosts[][DNS_TEST_HOST_LEN], unsign
         TEST_ASSERT(data[i].result == NSAPI_ERROR_OK || data[i].result == NSAPI_ERROR_NO_MEMORY || data[i].result == NSAPI_ERROR_BUSY || data[i].result == NSAPI_ERROR_DNS_FAILURE || data[i].result == NSAPI_ERROR_TIMEOUT);
         if (data[i].result == NSAPI_ERROR_OK) {
             (*exp_ok)++;
-            tr_info("DNS: query \"%s\" => \"%s\"",
-                    hosts[i], data[i].addr.get_ip_address());
+            printf("DNS: query \"%s\" => \"%s\"\n",
+                   hosts[i], data[i].addr.get_ip_address());
         } else if (data[i].result == NSAPI_ERROR_DNS_FAILURE) {
             (*exp_dns_failure)++;
-            tr_error("DNS: query \"%s\" => DNS failure", hosts[i]);
+            printf("DNS: query \"%s\" => DNS failure\n", hosts[i]);
         } else if (data[i].result == NSAPI_ERROR_TIMEOUT) {
             (*exp_timeout)++;
-            tr_error("DNS: query \"%s\" => timeout", hosts[i]);
+            printf("DNS: query \"%s\" => timeout\n", hosts[i]);
         } else if (data[i].result == NSAPI_ERROR_NO_MEMORY) {
             (*exp_no_mem)++;
-            tr_error("DNS: query \"%s\" => no memory", hosts[i]);
+            printf("DNS: query \"%s\" => no memory\n", hosts[i]);
         } else if (data[i].result == NSAPI_ERROR_BUSY) {
             (*exp_no_mem)++;
-            tr_error("DNS: query \"%s\" => busy", hosts[i]);
+            printf("DNS: query \"%s\" => busy\n", hosts[i]);
         }
     }
 
@@ -132,22 +127,22 @@ void do_gethostbyname(const char hosts[][DNS_TEST_HOST_LEN], unsigned int op_cou
 
         if (err == NSAPI_ERROR_OK) {
             (*exp_ok)++;
-            tr_info("DNS: query \"%s\" => \"%s\"",
-                    hosts[i], address.get_ip_address());
+            printf("DNS: query \"%s\" => \"%s\"\n",
+                   hosts[i], address.get_ip_address());
         } else if (err == NSAPI_ERROR_DNS_FAILURE) {
             (*exp_dns_failure)++;
-            tr_error("DNS: query \"%s\" => DNS failure", hosts[i]);
+            printf("DNS: query \"%s\" => DNS failure\n", hosts[i]);
         } else if (err == NSAPI_ERROR_TIMEOUT) {
             (*exp_timeout)++;
-            tr_error("DNS: query \"%s\" => timeout", hosts[i]);
+            printf("DNS: query \"%s\" => timeout\n", hosts[i]);
         } else if (err == NSAPI_ERROR_NO_MEMORY) {
             (*exp_no_mem)++;
-            tr_error("DNS: query \"%s\" => no memory", hosts[i]);
+            printf("DNS: query \"%s\" => no memory\n", hosts[i]);
         } else if (err == NSAPI_ERROR_BUSY) {
             (*exp_no_mem)++;
-            tr_error("DNS: query \"%s\" => busy", hosts[i]);
+            printf("DNS: query \"%s\" => busy\n", hosts[i]);
         } else {
-            tr_error("DNS: query \"%s\" => %d, unexpected answer", hosts[i], err);
+            printf("DNS: query \"%s\" => %d, unexpected answer\n", hosts[i], err);
             TEST_ASSERT(err == NSAPI_ERROR_OK || err == NSAPI_ERROR_NO_MEMORY || err == NSAPI_ERROR_BUSY || err == NSAPI_ERROR_DNS_FAILURE || err == NSAPI_ERROR_TIMEOUT);
         }
     }
@@ -160,29 +155,18 @@ NetworkInterface *get_interface()
 
 static void net_bringup()
 {
-    nsapi_dns_reset();
     MBED_ASSERT(MBED_CONF_APP_DNS_TEST_HOSTS_NUM >= MBED_CONF_NSAPI_DNS_CACHE_SIZE && MBED_CONF_APP_DNS_TEST_HOSTS_NUM >= MBED_CONF_APP_DNS_SIMULT_QUERIES + 1);
 
     net = NetworkInterface::get_default_instance();
     nsapi_error_t err = net->connect();
     TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, err);
-    SocketAddress address;
-    net->get_ip_address(&address);
-
-#define MESH 3
-#if MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == MESH
-    printf("Waiting for GLOBAL_UP\n");
-    while (net->get_connection_status() != NSAPI_STATUS_GLOBAL_UP) {
-        ThisThread::sleep_for(500);
-    }
-#endif
-    printf("MBED: IP address is '%s'\n", address ? address.get_ip_address() : "null");
+    printf("MBED: IP address is '%s'\n", net->get_ip_address() ? net->get_ip_address() : "null");
 }
 
 static void net_bringdown()
 {
     NetworkInterface::get_default_instance()->disconnect();
-    tr_info("MBED: ifdown");
+    printf("MBED: ifdown\n");
 }
 
 // Test setup
@@ -230,4 +214,3 @@ int main()
 }
 
 #endif // !defined(MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE) || (MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == WIFI && !defined(MBED_CONF_NSAPI_DEFAULT_WIFI_SSID))
-#endif // !defined(MBED_CONF_RTOS_PRESENT)

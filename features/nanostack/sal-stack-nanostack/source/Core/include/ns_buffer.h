@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2021, Pelion and affiliates.
+ * Copyright (c) 2008-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -124,7 +124,6 @@ typedef struct buffer_options {
     bool    need_predecessor: 1;        /*!< Used as an indicator that predecessor address needed */
     bool    multicast_loop: 1;          /*!< We want loopback if we're a group member (TX), or this IS the loopback if RX */
     bool    mpl_permitted: 1;           /*!< MPL will be used if enabled on interface and scope >=3 */
-    bool    edfe_mode: 1;               /*!< Use Extended Directed Frame Exchange pattern in MAC layer */
 #ifndef NO_IP_FRAGMENT_TX
     bool    ipv6_dontfrag: 1;           /*!< Don't IPv6 fragment (RFC 3542) */
 #endif
@@ -180,9 +179,7 @@ typedef enum {
 typedef enum {
     QOS_NORMAL = 0,
     QOS_HIGH = 1,
-    QOS_NETWORK_CTRL = 2,
-    QOS_EXPEDITE_FORWARD = 3,
-    QOS_MAC_BEACON = 4
+    QOS_MAC_BEACON = 2
 } buffer_priority_t;
 
 #define B_TO_MAC_MLME_MASK (B_DIR_MASK + B_FROM_MASK + B_TO_MASK )
@@ -218,7 +215,6 @@ typedef struct buffer {
     bool                rpl_instance_known: 1;
     bool                ip_routed_up: 1;
     uint8_t             rpl_flag_error;
-    uint32_t            adaptation_timestamp;   /*!< Timestamp when buffer pushed to adaptation interface. Unit 100ms */
     //uint8_t             bc_sending_superframe;  /*FHSS uses this randomly chosen superframe to send this packet (if broadcast)*/
     //uint8_t             fhss_channel_retries_left;
     //uint8_t             ip_transmission_prev_seq;  /*!< XXX: this stores the data packet seq. number, which is needed for re-transmission. */
@@ -326,7 +322,7 @@ struct socket *buffer_socket_set(buffer_t *buf, struct socket *socket);
         } while(0)
 
 /** get data length*/
-#define buffer_data_length(x)  (int)(x->buf_end - x->buf_ptr)
+#define buffer_data_length(x)  (int16_t)(x->buf_end - x->buf_ptr)
 
 /** get data length Set*/
 #define buffer_data_length_set(x,z)  ((x)->buf_end = (x)->buf_ptr + (z))

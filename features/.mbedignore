@@ -1,0 +1,8 @@
+cellular/*
+cryptocell/*
+netsocket/*
+lorawan/*
+lwipstack/*
+nanostack/*
+nfc/*
+FEATURE_BLE/*

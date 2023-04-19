@@ -19,6 +19,7 @@
 #include "greentea-client/test_env.h"
 #include "unity.h"
 #include "utest.h"
+#include "rtos.h"
 #include "hal/us_ticker_api.h"
 
 #if !DEVICE_USTICKER

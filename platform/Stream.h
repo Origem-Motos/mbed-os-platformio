@@ -45,7 +45,6 @@ public:
     Stream(const char *name = NULL);
     virtual ~Stream();
 
-#if !MBED_CONF_PLATFORM_STDIO_MINIMAL_CONSOLE_ONLY
     int putc(int c);
     int puts(const char *s);
     int getc();
@@ -60,7 +59,7 @@ public:
         return _file;
     }
 
-#endif // !MBED_CONF_PLATFORM_STDIO_MINIMAL_CONSOLE_ONLY
+protected:
     virtual int close();
     virtual ssize_t write(const void *buffer, size_t length);
     virtual ssize_t read(void *buffer, size_t length);
@@ -71,13 +70,10 @@ public:
     virtual int sync();
     virtual off_t size();
 
-protected:
     virtual int _putc(int c) = 0;
     virtual int _getc() = 0;
 
-#if !MBED_CONF_PLATFORM_STDIO_MINIMAL_CONSOLE_ONLY
     std::FILE *_file;
-#endif // !MBED_CONF_PLATFORM_STDIO_MINIMAL_CONSOLE_ONLY
 
     /** Acquire exclusive access to this object.
      */

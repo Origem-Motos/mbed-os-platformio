@@ -69,10 +69,10 @@ void TLSSOCKET_RECV_TIMEOUT()
                     TEST_FAIL();
                     goto CLEANUP;
                 }
-                tr_info("MBED: recv() took: %dus\n", timer.read_us());
+                printf("MBED: recv() took: %dus\n", timer.read_us());
                 continue;
             } else if (recvd < 0) {
-                tr_error("[pkt#%02d] network error %d\n", i, recvd);
+                printf("[pkt#%02d] network error %d\n", i, recvd);
                 TEST_FAIL();
                 goto CLEANUP;
             }

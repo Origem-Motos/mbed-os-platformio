@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, Pelion and affiliates.
+ * Copyright (c) 2014-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,23 +39,6 @@ extern "C" {
 
 #include "ns_types.h"
 
-/**
- * \brief Set Wi-SUN version number
- *
- * Sets the Wi-SUN protocol version.
- *      1 = Wi-SUN FAN 1.0
- *      2 = Wi-SUN FAN 1.1
- *
- * Set version to 0 to stop override and use stack default
- *
- * \param interface_id               Network Interface
- * \param version                    Wi-SUN version
- *
- * \return 0                         OK
- * \return <0                        Failure
- */
-
-int ws_test_version_set(int8_t interface_id, uint8_t version);
 /**
  * \brief Set Pan size.
  *
@@ -183,56 +166,6 @@ int ws_test_gtk_time_settings_set(
  * \return <0                        GTK set has failed
  */
 int ws_test_next_gtk_set(int8_t interface_id, uint8_t *gtk[4]);
-
-/**
- * Sets 6LoWPAN fragmentation MTU size to test fragmentation
- *
- * \param interface_id Network interface ID.
- * \param mtu_size Size of 6LoWPAN MTU when fragmentation occurs.
- *
- * \return 0                        Success
- * \return <0                       Failure
- */
-int ws_test_6lowpan_fragmentation_mtu_size_set(int8_t interface_id, uint16_t mtu_size);
-
-/**
- * Disable First EDFE data packet send.
- *
- * Made only for test purpose for test EDFE client Data wait timeout.
- *
- * \param interface_id Network interface ID.
- * \param skip True for skip first data packet false disable unused flag.
- *
- * \return 0                        Success
- * \return <0                       Failure
- */
-void ws_test_skip_edfe_data_send(int8_t interface_id, bool skip);
-
-/**
- * Drop configured EDFE data packets.
- *
- * Made only for test purpose for test EDFE data sender retry send logic.
- *
- * \param interface_id Network interface ID.
- * \param number_of_dropped_frames How many packets will be dropped.
- *
- * \return 0                        Success
- * \return <0                       Failure
- */
-int8_t  ws_test_drop_edfe_data_frames(int8_t interface_id, uint8_t number_of_dropped_frames);
-
-/**
- * Set neighbour temporary timeout value.
- *
- * Made only for test purpose for test EDFE certificatiomn test harness.
- *
- * \param interface_id Network interface ID.
- * \param temporary_lifetime 0 to disable test harness, 240-2200 enable longer temporary neighbour lifetime. Values bigger than 2200 will be capped to 2200.
- *
- * \return 0                        Success
- * \return <0                       Failure
- */
-int ws_test_neighbour_temporary_lifetime_set(int8_t interface_id, uint32_t temporary_lifetime);
 
 #ifdef __cplusplus
 }

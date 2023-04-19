@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, 2017, 2020, Pelion and affiliates.
+ * Copyright (c) 2014-2015, 2017, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,11 +22,11 @@
  * \enum error_t
  * \brief System generic error.
  */
-typedef enum {
+typedef enum error_t {
     eOK = 0,    /*!< no error */
     eFALSE = 1, /*!< no result */
     eBUSY = 2,  /*!< resource busy */
     eSYSTEM     /*!< error code readable in sys_error */
-} socket_error_t;
+} error_t;
 
 #endif /* NS_ERROR_TYPES_H_ */

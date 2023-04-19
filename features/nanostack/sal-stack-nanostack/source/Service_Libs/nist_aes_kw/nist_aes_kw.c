@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, Pelion and affiliates.
+ * Copyright (c) 2016-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +21,11 @@
 #include "ns_list.h"
 #include "ns_trace.h"
 
-#include "mbedtls/version.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_NIST_KW_C) && defined(HAVE_WS) && (defined(HAVE_PAE_SUPP) || defined(HAVE_PAE_AUTH))
 #include "mbedtls/nist_kw.h"
@@ -44,7 +48,7 @@ int8_t nist_aes_key_wrap(uint8_t is_wrap, const uint8_t *key, int16_t key_bits, 
     const uint8_t *print_data = key;
     uint16_t print_data_len = key_bits / 8;
     while (true) {
-        tr_debug("nist_aes_key_wrap key %s", trace_array(print_data, print_data_len > 32 ? 32 : print_data_len));
+        tr_debug("nist_aes_key_wrap key %s\n", trace_array(print_data, print_data_len > 32 ? 32 : print_data_len));
         if (print_data_len > 32) {
             print_data_len -= 32;
             print_data += 32;
@@ -56,7 +60,7 @@ int8_t nist_aes_key_wrap(uint8_t is_wrap, const uint8_t *key, int16_t key_bits, 
     print_data = input;
     print_data_len = input_len;
     while (true) {
-        tr_debug("nist_aes_key_wrap in %s", trace_array(print_data, print_data_len > 32 ? 32 : print_data_len));
+        tr_debug("nist_aes_key_wrap in %s\n", trace_array(print_data, print_data_len > 32 ? 32 : print_data_len));
         if (print_data_len > 32) {
             print_data_len -= 32;
             print_data += 32;
@@ -91,7 +95,7 @@ int8_t nist_aes_key_wrap(uint8_t is_wrap, const uint8_t *key, int16_t key_bits, 
     print_data = output;
     print_data_len = *output_len;
     while (true) {
-        tr_debug("nist_aes_key_wrap out %s", trace_array(print_data, print_data_len > 32 ? 32 : print_data_len));
+        tr_debug("nist_aes_key_wrap out %s\n", trace_array(print_data, print_data_len > 32 ? 32 : print_data_len));
         if (print_data_len > 32) {
             print_data_len -= 32;
             print_data += 32;

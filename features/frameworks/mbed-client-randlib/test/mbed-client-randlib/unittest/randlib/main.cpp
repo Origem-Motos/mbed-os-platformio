@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, 2018, 2021, Pelion and affiliates.
+ * Copyright (c) 2015 ARM. All rights reserved.
  */
 
 #include "CppUTest/CommandLineTestRunner.h"

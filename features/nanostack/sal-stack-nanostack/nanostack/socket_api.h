@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2021, Pelion and affiliates.
+ * Copyright (c) 2010-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -138,41 +138,10 @@ extern "C" {
  * After the successful state change, data can be sent using socket_send().
  * The connection can be shut down in either direction with socket_shutdown() function - shutting down write signals end-of-data to the peer.
  *
- *
  * \section socket-udpicmp How to use UDP and RAW socket:
  *
  * A UDP socket is ready to receive and send data immediately after a successful call of socket_open() and a NET_READY event is received.
  * Data can be transmitted with the socket_sendto() function. An ICMP socket works with same function call.
- *
- * \section socket-trafficpriority How to set socket message priority to improve Quality of Service (QoS):
- *
- * IPv6 header has a field traffic class that contains a 6-bit Differentiated Services Code Point (DSCP) field that is used for packet
- * classification. By default the packet class level is set to 0 NS_DSCP_DEFAULT.
- *
- * Recommend QoS levels:
- *
- * |     Level        |Description                                                                                          |
- * | :--------------: | :-------------------------------------------------------------------------------------------------: |
- * | NS_DSCP_DEFAULT  | Default level for normal data usage                                                                 |
- * | NS_DSCP_AF11     | Higher Application data service for prioritize packet forwarding.                                   |
- * | NS_DSCP_EF       | Expedited Forwarding (EF) for short messages. Allows low loss, low delay, and low jitter services.  |
- * |                  | This is meant for very important messages like alerts. EF packet length should be kept in           |
- * |                  | minimum. This should not be used for any other purpose as it will block other network traffic       |
- * | NS_DSCP_CS6      | Network protocol message Priority. Application should not use this.                                 |
- *
- * High priority messages can be set to use higher than default class by using socket_setsockopt() and
- * socket_option_traffic_class_dsc_set() helper.
- *
- * Example to send a message using Expedited Forwarding class:
- *
- * //Set EF class to high priority messages
- * int16_t traffic_class = socket_option_traffic_class_dsc_set(NS_DSCP_EF);
- * socket_setsockopt(socket_id, SOCKET_IPPROTO_IPV6, SOCKET_IPV6_TCLASS, &traffic_class, sizeof traffic_class);
- *
- * //Set traffic class back to default
- * traffic_class = socket_option_traffic_class_dsc_set(NS_DSCP_DEFAULT);
- * socket_setsockopt(socket_id, SOCKET_IPPROTO_IPV6, SOCKET_IPV6_TCLASS, &traffic_class, sizeof traffic_class);
- *
  */
 
 #include "ns_address.h"
@@ -227,7 +196,7 @@ typedef struct socket_callback_t {
 } socket_callback_t;
 
 /*!
- * \struct ns_msghdr
+ * \struct ns_msghdr_t
  * \brief Normal IP socket message structure for socket_recvmsg() and socket_sendmsg().
  */
 
@@ -242,7 +211,7 @@ typedef struct ns_msghdr {
 } ns_msghdr_t;
 
 /*!
- * \struct ns_cmsghdr
+ * \struct ns_cmsghdr_t
  * \brief Control messages.
  */
 typedef struct ns_cmsghdr {
@@ -273,7 +242,7 @@ typedef struct ns_cmsghdr {
 #define NS_MSG_LEGACY0  0x4000
 ///@}
 /*!
- * \struct ns_in6_pktinfo
+ * \struct ns_in6_pktinfo_t
  * \brief IPv6 packet info which is used for socket_recvmsg() socket_sendmsg().
  */
 typedef struct ns_in6_pktinfo {
@@ -281,24 +250,6 @@ typedef struct ns_in6_pktinfo {
     int8_t  ipi6_ifindex;    /**< send/recv interface index */
 } ns_in6_pktinfo_t;
 
-/** \name Socket DSCP (Differentiated Services Code Point) QoS level examples.
- * \anchor MSG_QOS_LEVELS
- */
-///@{
-/** Standard priority and it is socket default */
-#define NS_DSCP_DEFAULT 0
-/** Application high priority service: Stack priorities these messages over the default priority messages */
-#define NS_DSCP_AF11 10
-/** Expedited Forwarding (EF) QoS level enable high priority state: low loss, low delay, and low jitter services */
-#define NS_DSCP_EF 46
-/** Network protocol traffic allocated QoS level stack may internally use that */
-#define NS_DSCP_CS6 48
-///@}
-
-/** Helper Traffic class Differentiated Services Code for QoS  0-63. 0 is default which define Lowest Priority
- *
- * */
-#define socket_option_traffic_class_dsc_set(x)  (uint8_t)((x & 63) << 2)
 
 /** \name Alignment macros for control message headers
 * \anchor CMSG_ALIGN_FLAGS
@@ -743,30 +694,27 @@ static inline int8_t socket_read_session_address(int8_t socket, ns_address_t *ad
  *
  * IPv6 socket options summary
  *
- * | opt_name / cmsg_type         | Data type         | set/getsockopt  | sendmsg | recvmsg                           |
- * | :--------------------------: | :---------- ----: | :-------------: | :-----: | :-------------------------------: |
- * | SOCKET_IPV6_TCLASS           | int16_t           |     Yes         |   Yes   | If enabled with RECVTCLASS        |
- * | SOCKET_IPV6_UNICAST_HOPS     | int16_t           |     Yes         |   No    | No                                |
- * | SOCKET_IPV6_MULTICAST_HOPS   | int16_t           |     Yes         |   No    | No                                |
- * | SOCKET_IPV6_ADDR_PREFERENCES | int               |     Yes         |   No    | No                                |
- * | SOCKET_IPV6_USE_MIN_MTU      | int8_t            |     Yes         |   Yes   | No                                |
- * | SOCKET_IPV6_DONTFRAG         | int8_t            |     Yes         |   Yes   | No                                |
- * | SOCKET_IPV6_FLOW_LABEL       | int32_t           |     Yes         |   No    | No                                |
- * | SOCKET_IPV6_HOPLIMIT         | int16_t           |     No          |   Yes   | If enabled with RECVHOPLIMIT      |
- * | SOCKET_IPV6_PKTINFO          | ns_in6_pktinfo_t  |     No          |   Yes   | If enabled with RECVPKTINFO       |
- * | SOCKET_IPV6_RECVPKTINFO      | bool              |     Yes         |   No    | No                                |
- * | SOCKET_IPV6_RECVHOPLIMIT     | bool              |     Yes         |   No    | No                                |
- * | SOCKET_IPV6_RECVTCLASS       | bool              |     Yes         |   No    | No                                |
- * | SOCKET_IPV6_MULTICAST_IF     | int8_t            |     Yes         |   No    | No                                |
- * | SOCKET_IPV6_MULTICAST_LOOP   | bool              |     Yes         |   Yes   | No                                |
- * | SOCKET_IPV6_JOIN_GROUP       | ns_ipv6_mreq_t    |     Set only    |   No    | No                                |
- * | SOCKET_IPV6_LEAVE_GROUP      | ns_ipv6_mreq_t    |     Set only    |   No    | No                                |
- * | SOCKET_LATENCY               | ns_ipv6_latency_t |     Get only    |   No    | No                                |
- * | SOCKET_STAGGER               | ns_ipv6_stagger_t |     Get only    |   No    | No                                |
- * | SOCKET_EDFE_MODE             | bool              |     Set only    |   No    | No                                |
- * | SOCKET_BROADCAST_PAN         | int8_t            |     Yes         |   No    | No                                |
- * | SOCKET_LINK_LAYER_SECURITY   | int8_t            |     Yes         |   No    | No                                |
- * | SOCKET_INTERFACE_SELECT      | int8_t            |     Yes         |   No    | No                                |
+ * | opt_name / cmsg_type         | Data type        | set/getsockopt  | sendmsg | recvmsg                           |
+ * | :--------------------------: | :--------------: | :-------------: | :-----: | :-------------------------------: |
+ * | SOCKET_IPV6_TCLASS           | int16_t          |     Yes         |   Yes   | If enabled with RECVTCLASS        |
+ * | SOCKET_IPV6_UNICAST_HOPS     | int16_t          |     Yes         |   No    | No                                |
+ * | SOCKET_IPV6_MULTICAST_HOPS   | int16_t          |     Yes         |   No    | No                                |
+ * | SOCKET_IPV6_ADDR_PREFERENCES | int              |     Yes         |   No    | No                                |
+ * | SOCKET_IPV6_USE_MIN_MTU      | int8_t           |     Yes         |   Yes   | No                                |
+ * | SOCKET_IPV6_DONTFRAG         | int8_t           |     Yes         |   Yes   | No                                |
+ * | SOCKET_IPV6_FLOW_LABEL       | int32_t          |     Yes         |   No    | No                                |
+ * | SOCKET_IPV6_HOPLIMIT         | int16_t          |     No          |   Yes   | If enabled with RECVHOPLIMIT      |
+ * | SOCKET_IPV6_PKTINFO          | ns_in6_pktinfo_t |     No          |   Yes   | If enabled with RECVPKTINFO       |
+ * | SOCKET_IPV6_RECVPKTINFO      | bool             |     Yes         |   No    | No                                |
+ * | SOCKET_IPV6_RECVHOPLIMIT     | bool             |     Yes         |   No    | No                                |
+ * | SOCKET_IPV6_RECVTCLASS       | bool             |     Yes         |   No    | No                                |
+ * | SOCKET_IPV6_MULTICAST_IF     | int8_t           |     Yes         |   No    | No                                |
+ * | SOCKET_IPV6_MULTICAST_LOOP   | bool             |     Yes         |   Yes   | No                                |
+ * | SOCKET_IPV6_JOIN_GROUP       | ns_ipv6_mreq_t   |     Set only    |   No    | No                                |
+ * | SOCKET_IPV6_LEAVE_GROUP      | ns_ipv6_mreq_t   |     Set only    |   No    | No                                |
+ * | SOCKET_BROADCAST_PAN         | int8_t           |     Yes         |   No    | No                                |
+ * | SOCKET_LINK_LAYER_SECURITY   | int8_t           |     Yes         |   No    | No                                |
+ * | SOCKET_INTERFACE_SELECT      | int8_t           |     Yes         |   No    | No                                |
  *
  */
 
@@ -806,9 +754,6 @@ static inline int8_t socket_read_session_address(int8_t socket, ns_address_t *ad
 /** Leave a multicast group, using ns_ipv6_mreq_t */
 #define SOCKET_IPV6_LEAVE_GROUP             16
 
-#define SOCKET_LATENCY                      0xf9 /**< Not standard, read estimated latency to reach destination */
-#define SOCKET_STAGGER                      0xfa /**< Not standard, read estimated stagger value that can be used as initial delay after bootstrap or firmware update. */
-#define SOCKET_EDFE_MODE                    0xfb /**< Not standard, Extended Directed Frame Exchange mode enabled/disabled in MAC layer */
 #define SOCKET_BROADCAST_PAN                0xfc /**< Internal use - transmit with IEEE 802.15.4 broadcast PAN ID */
 #define SOCKET_LINK_LAYER_SECURITY          0xfd /**< Not standard enable or disable socket security at link layer (For 802.15.4). */
 #define SOCKET_INTERFACE_SELECT             0xfe /**< Not standard socket interface ID. */
@@ -820,20 +765,6 @@ typedef struct ns_ipv6_mreq {
     int8_t ipv6mr_interface;            /**< interface id */
 } ns_ipv6_mreq_t;
 
-/** Latency request used for getsockopt() */
-typedef struct {
-    uint8_t dest_addr[16];      /**< [IN] IPv6 destination address */
-    uint32_t latency;           /**< [OUT] estimated latency value in milliseconds */
-} ns_ipv6_latency_t;
-
-/** Stagger request used for getsockopt() */
-typedef struct {
-    uint8_t dest_addr[16];      /**< [IN] IPv6 destination address */
-    uint16_t data_amount;       /**< [IN] Amount of data in kilobytes */
-    uint16_t stagger_min;       /**< [OUT] Minimum stagger value in seconds */
-    uint16_t stagger_max;       /**< [OUT] Maximum stagger value in seconds */
-    uint16_t stagger_rand;      /**< [OUT] Randomized stagger value in seconds */
-} ns_ipv6_stagger_t;
 /**
  * \brief Set an option for a socket
  *
@@ -873,7 +804,6 @@ int8_t socket_setsockopt(int8_t socket, uint8_t level, uint8_t opt_name, const v
  * \return 0 on success.
  * \return -1 invalid socket ID.
  * \return -2 invalid/unsupported option.
- * \return -3 data can't be retrieved.
  */
 int8_t socket_getsockopt(int8_t socket, uint8_t level, uint8_t opt_name, void *opt_value, uint16_t *opt_len);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, 2021, Pelion and affiliates.
+ * Copyright (c) 2017-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,7 +36,7 @@ typedef struct ns_mdns *ns_mdns_t;  /**< Instance */
 typedef struct ns_mdns_service *ns_mdns_service_t;  /**< Service instance */
 
 /*!
- * \struct ns_mdns_service_param
+ * \struct ns_mdns_service_param_t
  * \brief Structure for mDNS service parameters
  */
 typedef struct ns_mdns_service_param {

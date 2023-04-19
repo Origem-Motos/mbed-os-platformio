@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, 2021, Pelion and affiliates.
+ * Copyright (c) 2014-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +48,6 @@ extern "C" {
 #define ARM_AES_MBEDTLS_CONTEXT_MIN 1 /**</ event loop use only */
 #endif
 
-/** AES context */
 typedef struct arm_aes_context arm_aes_context_t;
 
 /**

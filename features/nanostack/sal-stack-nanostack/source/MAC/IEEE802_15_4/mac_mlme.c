@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2021, Pelion and affiliates.
+ * Copyright (c) 2013-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +48,6 @@
 #include "MAC/IEEE802_15_4/mac_timer.h"
 #include "MAC/IEEE802_15_4/mac_pd_sap.h"
 #include "MAC/IEEE802_15_4/mac_mcps_sap.h"
-#include "MAC/IEEE802_15_4/mac_cca_threshold.h"
 #include "MAC/virtual_rf/virtual_rf_defines.h"
 #include "MAC/rf_driver_storage.h"
 
@@ -70,7 +69,6 @@ static void mac_mlme_timer_cb(int8_t timer_id, uint16_t slots);
 static void mac_mlme_start_confirm_handler(protocol_interface_rf_mac_setup_s *rf_ptr, const mlme_start_conf_t *conf);
 static void mac_mlme_scan_confirm_handler(protocol_interface_rf_mac_setup_s *rf_ptr, const mlme_scan_conf_t *conf);
 static int mac_mlme_set_symbol_rate(protocol_interface_rf_mac_setup_s *rf_mac_setup);
-static int mac_mlme_allocate_tx_buffers(protocol_interface_rf_mac_setup_s *rf_mac_setup, arm_device_driver_list_s *dev_driver, uint16_t mtu_size);
 
 static void mac_mlme_energy_scan_start(protocol_interface_rf_mac_setup_s *rf_mac_setup, uint8_t channel)
 {
@@ -449,8 +447,6 @@ int8_t mac_mlme_reset(protocol_interface_rf_mac_setup_s *rf_mac_setup, const mlm
     rf_mac_setup->macWaitingData = false;
     rf_mac_setup->macDataPollReq = false;
     rf_mac_setup->macRxDataAtPoll = false;
-    rf_mac_setup->macTxProcessActive = false;
-    rf_mac_setup->mac_ack_tx_active = false;
     //Clean MAC
     if (reset->SetDefaultPIB) {
         tr_debug("RESET MAC PIB");
@@ -514,10 +510,6 @@ static int8_t mac_mlme_boolean_set(protocol_interface_rf_mac_setup_s *rf_mac_set
                 rf_mac_setup->dev_driver->phy_driver->extension(PHY_EXTENSION_ACCEPT_ANY_BEACON, (uint8_t *)&value);
             }
             break;
-
-        case macEdfeForceStop:
-            return mac_data_edfe_force_stop(rf_mac_setup);
-
         case macAcceptByPassUnknowDevice:
             rf_mac_setup->mac_security_bypass_unknow_device = value;
             break;
@@ -549,9 +541,6 @@ static int8_t mac_mlme_16bit_set(protocol_interface_rf_mac_setup_s *rf_mac_setup
 
         case macTransactionPersistenceTime:
             //TODO: check this also
-            break;
-        case macDeviceDescriptionPanIDUpdate:
-            mac_sec_mib_device_description_pan_update(rf_mac_setup, value);
             break;
 
         default:
@@ -598,7 +587,7 @@ static int8_t mac_mlme_8bit_set(protocol_interface_rf_mac_setup_s *rf_mac_setup,
             break;
 
         case macMaxBE:
-            if (value > 8 || value < 1) {
+            if (value > 8 || value < 3) {
                 return -1;
             }
             rf_mac_setup->macMaxBE = value;
@@ -654,11 +643,11 @@ void mac_extended_mac_set(protocol_interface_rf_mac_setup_s *rf_mac_setup, const
 
 static uint32_t mac_calc_ack_wait_duration(protocol_interface_rf_mac_setup_s *rf_mac_setup, uint16_t symbols)
 {
-    uint32_t AckWaitDuration_us = 0;
+    uint32_t AckWaitDuration = 0;
     if (rf_mac_setup->rf_csma_extension_supported) {
-        AckWaitDuration_us = (symbols * rf_mac_setup->symbol_time_ns) / 1000;
+        AckWaitDuration = symbols * rf_mac_setup->symbol_time_us;
     }
-    return AckWaitDuration_us;
+    return AckWaitDuration;
 }
 
 static int8_t mac_mlme_set_ack_wait_duration(protocol_interface_rf_mac_setup_s *rf_mac_setup, const mlme_set_t *set_req)
@@ -681,6 +670,7 @@ static int8_t mac_mlme_device_description_set(protocol_interface_rf_mac_setup_s 
     if (set_req->value_size != sizeof(mlme_device_descriptor_t)) {
         return -1;
     }
+
     return mac_sec_mib_device_description_set(set_req->attr_index, (mlme_device_descriptor_t *) set_req->value_pointer, rf_mac_setup);
 }
 
@@ -749,18 +739,6 @@ static int8_t mac_mlme_set_multi_csma_parameters(protocol_interface_rf_mac_setup
     return 0;
 }
 
-static int8_t mac_mlme_set_data_request_restart_config(protocol_interface_rf_mac_setup_s *rf_mac_setup, const mlme_set_t *set_req)
-{
-    mlme_request_restart_config_t request_restart_config;
-    memcpy(&request_restart_config, set_req->value_pointer, sizeof(mlme_request_restart_config_t));
-    rf_mac_setup->cca_failure_restart_max = request_restart_config.cca_failure_restart_max;
-    rf_mac_setup->tx_failure_restart_max = request_restart_config.tx_failure_restart_max;
-    rf_mac_setup->blacklist_min_ms = request_restart_config.blacklist_min_ms;
-    rf_mac_setup->blacklist_max_ms = request_restart_config.blacklist_max_ms;
-    tr_debug("Request restart config: CCA %u, TX %u, min %u, max %u", rf_mac_setup->cca_failure_restart_max, rf_mac_setup->tx_failure_restart_max, rf_mac_setup->blacklist_min_ms, rf_mac_setup->blacklist_max_ms);
-    return 0;
-}
-
 int8_t mac_mlme_set_req(protocol_interface_rf_mac_setup_s *rf_mac_setup, const mlme_set_t *set_req)
 {
     if (!set_req || !rf_mac_setup || !rf_mac_setup->dev_driver || !rf_mac_setup->dev_driver->phy_driver) {
@@ -786,38 +764,6 @@ int8_t mac_mlme_set_req(protocol_interface_rf_mac_setup_s *rf_mac_setup, const m
                 memcpy(rf_mac_setup->coord_long_address, set_req->value_pointer, 8);
             }
             return 0;
-        case macSetDataWhitening:
-            pu8 = (uint8_t *) set_req->value_pointer;
-            rf_mac_setup->dev_driver->phy_driver->extension(PHY_EXTENSION_SET_DATA_WHITENING, pu8);
-            tr_debug("%s data whitening", *pu8 == (bool) true ? "Enable" : "Disable");
-            return 0;
-        case macCCAThresholdStart:
-            pu8 = (uint8_t *) set_req->value_pointer;
-            mac_cca_thr_init(rf_mac_setup, *pu8, *((int8_t *)pu8 + 1), *((int8_t *)pu8 + 2), *((int8_t *)pu8 + 3));
-            return 0;
-        case mac802_15_4Mode:
-            pu8 = (uint8_t *) set_req->value_pointer;
-            if (rf_mac_setup->current_mac_mode == *pu8) {
-                return -1;
-            }
-            rf_mac_setup->current_mac_mode = *pu8;
-            rf_mac_setup->dev_driver->phy_driver->extension(PHY_EXTENSION_SET_802_15_4_MODE, pu8);
-            uint16_t new_mtu_size = MAC_IEEE_802_15_4_MAX_PHY_PACKET_SIZE;
-            if (*pu8 == IEEE_802_15_4G_2012) {
-                new_mtu_size = MAC_IEEE_802_15_4G_MAX_PHY_PACKET_SIZE;
-            }
-            mac_api_t *mac_api = get_sw_mac_api(rf_mac_setup);
-            if (rf_mac_setup->dev_driver->phy_driver->phy_MTU > new_mtu_size) {
-                mac_api->phyMTU = rf_mac_setup->phy_mtu_size = new_mtu_size;
-            } else {
-                mac_api->phyMTU = rf_mac_setup->phy_mtu_size = rf_mac_setup->dev_driver->phy_driver->phy_MTU;
-            }
-            if (mac_mlme_allocate_tx_buffers(rf_mac_setup, rf_mac_setup->dev_driver, rf_mac_setup->phy_mtu_size)) {
-                tr_err("Failed to reallocate TX buffers");
-                return -1;
-            }
-            tr_debug("Set MAC mode to %s, MTU size: %u", *pu8 == IEEE_802_15_4G_2012 ? "IEEE 802.15.4G-2012" : "IEEE 802.15.4-2011", rf_mac_setup->phy_mtu_size);
-            return 0;
         case macTXPower:
             pu8 = (uint8_t *) set_req->value_pointer;
             rf_mac_setup->dev_driver->phy_driver->extension(PHY_EXTENSION_SET_TX_POWER, pu8);
@@ -826,17 +772,14 @@ int8_t mac_mlme_set_req(protocol_interface_rf_mac_setup_s *rf_mac_setup, const m
         case macCCAThreshold:
             pu8 = (uint8_t *) set_req->value_pointer;
             rf_mac_setup->dev_driver->phy_driver->extension(PHY_EXTENSION_SET_CCA_THRESHOLD, pu8);
-            tr_info("Set CCA threshold to %u%%", *pu8);
+            tr_debug("Set CCA threshold to %u%%", *pu8);
             return 0;
         case macMultiCSMAParameters:
             return mac_mlme_set_multi_csma_parameters(rf_mac_setup, set_req);
-        case macRequestRestart:
-            return mac_mlme_set_data_request_restart_config(rf_mac_setup, set_req);
         case macRfConfiguration:
             rf_mac_setup->dev_driver->phy_driver->extension(PHY_EXTENSION_SET_RF_CONFIGURATION, (uint8_t *) set_req->value_pointer);
             mac_mlme_set_symbol_rate(rf_mac_setup);
             phy_rf_channel_configuration_s *config_params = (phy_rf_channel_configuration_s *)set_req->value_pointer;
-            rf_mac_setup->datarate = config_params->datarate;
             tr_info("RF config update:");
             tr_info("Frequency(ch0): %"PRIu32"Hz", config_params->channel_0_center_frequency);
             tr_info("Channel spacing: %"PRIu32"Hz", config_params->channel_spacing);
@@ -844,9 +787,6 @@ int8_t mac_mlme_set_req(protocol_interface_rf_mac_setup_s *rf_mac_setup, const m
             tr_info("Number of channels: %u", config_params->number_of_channels);
             tr_info("Modulation: %u", config_params->modulation);
             tr_info("Modulation index: %u", config_params->modulation_index);
-            tr_info("FEC: %u", config_params->fec);
-            tr_info("OFDM MCS: %u", config_params->ofdm_mcs);
-            tr_info("OFDM option: %u", config_params->ofdm_option);
             return 0;
         default:
             return mac_mlme_handle_set_values(rf_mac_setup, set_req);
@@ -858,7 +798,7 @@ int8_t mac_mlme_get_req(struct protocol_interface_rf_mac_setup *rf_mac_setup, ml
     if (!get_req || !rf_mac_setup) {
         return -1;
     }
-    mac_cca_threshold_s *cca_thr_table = NULL;
+
     switch (get_req->attr) {
         case macDeviceTable:
             get_req->value_pointer = mac_sec_mib_device_description_get_attribute_index(rf_mac_setup, get_req->attr_index);
@@ -886,12 +826,6 @@ int8_t mac_mlme_get_req(struct protocol_interface_rf_mac_setup *rf_mac_setup, ml
             }
 
             get_req->value_size = 4;
-            break;
-
-        case macCCAThreshold:
-            cca_thr_table = mac_get_cca_threshold_table(rf_mac_setup);
-            get_req->value_size = cca_thr_table->number_of_channels;
-            get_req->value_pointer = cca_thr_table->ch_thresholds;
             break;
 
         default:
@@ -1097,7 +1031,6 @@ void mac_mlme_data_base_deallocate(struct protocol_interface_rf_mac_setup *rf_ma
         ns_dyn_mem_free(rf_mac->mac_beacon_payload);
 
         mac_sec_mib_deinit(rf_mac);
-        mac_cca_thr_deinit(rf_mac);
         ns_dyn_mem_free(rf_mac);
     }
 }
@@ -1123,36 +1056,16 @@ static int mac_mlme_set_symbol_rate(protocol_interface_rf_mac_setup_s *rf_mac_se
 {
     if (rf_mac_setup->rf_csma_extension_supported) {
         rf_mac_setup->dev_driver->phy_driver->extension(PHY_EXTENSION_GET_SYMBOLS_PER_SECOND, (uint8_t *) &rf_mac_setup->symbol_rate);
-        rf_mac_setup->symbol_time_ns = 1000000000 / rf_mac_setup->symbol_rate;
-        tr_debug("SW-MAC driver support rf extension %"PRIu32" symbol/seconds  %"PRIu32" ns symbol time length", rf_mac_setup->symbol_rate, rf_mac_setup->symbol_time_ns);
+        rf_mac_setup->symbol_time_us = 1000000 / rf_mac_setup->symbol_rate;
+        tr_debug("SW-MAC driver support rf extension %"PRIu32" symbol/seconds  %"PRIu32" us symbol time length", rf_mac_setup->symbol_rate, rf_mac_setup->symbol_time_us);
         return 0;
     }
     return -1;
 }
 
-static int mac_mlme_allocate_tx_buffers(protocol_interface_rf_mac_setup_s *rf_mac_setup, arm_device_driver_list_s *dev_driver, uint16_t mtu_size)
+protocol_interface_rf_mac_setup_s *mac_mlme_data_base_allocate(uint8_t *mac64, arm_device_driver_list_s *dev_driver, mac_description_storage_size_t *storage_sizes)
 {
-    ns_dyn_mem_free(rf_mac_setup->dev_driver_tx_buffer.buf);
-    ns_dyn_mem_free(rf_mac_setup->mac_beacon_payload);
     uint16_t total_length = 0;
-    //Allocate tx buffer by given MTU + header + tail
-    total_length = mtu_size;
-    total_length += (dev_driver->phy_driver->phy_header_length + dev_driver->phy_driver->phy_tail_length);
-    rf_mac_setup->dev_driver_tx_buffer.buf = ns_dyn_mem_alloc(total_length);
-    if (!rf_mac_setup->dev_driver_tx_buffer.buf) {
-        return -1;
-    }
-    //allocate Beacon Payload buffer
-    rf_mac_setup->max_beacon_payload_length = mtu_size - MAC_IEEE_802_15_4_MAX_BEACON_OVERHEAD;
-    rf_mac_setup->mac_beacon_payload = ns_dyn_mem_alloc(rf_mac_setup->max_beacon_payload_length);
-    if (!rf_mac_setup->mac_beacon_payload) {
-        return -1;
-    }
-    return 0;
-}
-
-protocol_interface_rf_mac_setup_s *mac_mlme_data_base_allocate(uint8_t *mac64, arm_device_driver_list_s *dev_driver, mac_description_storage_size_t *storage_sizes, uint16_t mtu_size)
-{
     //allocate security
     if (!dev_driver || !mac64 || !dev_driver->phy_driver || !storage_sizes) {
         return NULL;
@@ -1174,7 +1087,6 @@ protocol_interface_rf_mac_setup_s *mac_mlme_data_base_allocate(uint8_t *mac64, a
     entry->aUnitBackoffPeriod = 20; //This can be different in some Platform 20 comes from 12-symbol turnaround and 8 symbol CCA read
     entry->number_of_csma_ca_periods = MAC_DEFAULT_NUMBER_OF_CSMA_PERIODS;
     entry->multi_cca_interval = MAC_DEFAULT_CSMA_MULTI_CCA_INTERVAL;
-    entry->mac_channel_list.channel_page = CHANNEL_PAGE_UNDEFINED;
 
     if (mac_sec_mib_init(entry, storage_sizes) != 0) {
         mac_mlme_data_base_deallocate(entry);
@@ -1185,9 +1097,20 @@ protocol_interface_rf_mac_setup_s *mac_mlme_data_base_allocate(uint8_t *mac64, a
         mac_mlme_data_base_deallocate(entry);
         return NULL;
     }
-    entry->phy_mtu_size = mtu_size;
 
-    if (mac_mlme_allocate_tx_buffers(entry, dev_driver, mtu_size)) {
+    //Allocate tx buffer by given MTU + header + tail
+    total_length = dev_driver->phy_driver->phy_MTU;
+    total_length += (dev_driver->phy_driver->phy_header_length + dev_driver->phy_driver->phy_tail_length);
+    entry->dev_driver_tx_buffer.buf = ns_dyn_mem_alloc(total_length);
+    if (!entry->dev_driver_tx_buffer.buf) {
+        mac_mlme_data_base_deallocate(entry);
+        return NULL;
+    }
+
+    //allocate Beacon Payload buffer
+    entry->max_beacon_payload_length = dev_driver->phy_driver->phy_MTU - MAC_IEEE_802_15_4_MAX_BEACON_OVERHEAD;
+    entry->mac_beacon_payload = ns_dyn_mem_alloc(entry->max_beacon_payload_length);
+    if (!entry->mac_beacon_payload) {
         mac_mlme_data_base_deallocate(entry);
         return NULL;
     }
@@ -1639,7 +1562,6 @@ int8_t mac_mlme_rf_channel_change(protocol_interface_rf_mac_setup_s *rf_mac_setu
     if (new_channel == rf_mac_setup->mac_channel) {
         return 0;
     }
-
     platform_enter_critical();
     if (rf_mac_setup->dev_driver->phy_driver->extension(PHY_EXTENSION_SET_CHANNEL, &new_channel) == 0) {
         rf_mac_setup->mac_channel = new_channel;
@@ -1702,7 +1624,6 @@ void mac_mlme_poll_req(protocol_interface_rf_mac_setup_s *cur, const mlme_poll_t
     }
 
     buf->fcf_dsn.frametype = FC_CMD_FRAME;
-    buf->WaitResponse = true;
     buf->fcf_dsn.ackRequested = true;
     buf->fcf_dsn.intraPan = true;
 
@@ -1837,7 +1758,7 @@ int8_t mac_mlme_beacon_tx(protocol_interface_rf_mac_setup_s *rf_ptr)
             ptr += BEACON_OPTION_JOIN_PRIORITY_LEN;
         }*/
     }
-    buf->priority = MAC_PD_DATA_HIGH_PRIORITY;
+    buf->priority = MAC_PD_DATA_HIGH_PRIOTITY;
     mcps_sap_pd_req_queue_write(rf_ptr, buf);
     sw_mac_stats_update(rf_ptr, STAT_MAC_BEA_TX_COUNT, 0);
     return 0;

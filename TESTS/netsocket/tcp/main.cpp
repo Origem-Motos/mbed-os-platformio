@@ -15,10 +15,6 @@
  * limitations under the License.
  */
 
-#if !defined(MBED_CONF_RTOS_PRESENT)
-#error [NOT_SUPPORTED] tcp test cases require a RTOS to run
-#else
-
 #define WIFI 2
 #if !defined(MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE) || \
     (MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == WIFI && !defined(MBED_CONF_NSAPI_DEFAULT_WIFI_SSID))
@@ -31,7 +27,6 @@
 #include "utest.h"
 #include "utest/utest_stack_trace.h"
 #include "tcp_tests.h"
-#include "ip6string.h"
 
 #ifndef ECHO_SERVER_ADDR
 #error [NOT_SUPPORTED] Requires parameters for echo server
@@ -66,7 +61,7 @@ void drop_bad_packets(TCPSocket &sock, int orig_timeout)
 nsapi_version_t get_ip_version()
 {
     SocketAddress test;
-    if (NetworkInterface::get_default_instance()->get_ip_address(&test) != NSAPI_ERROR_OK) {
+    if (!test.set_ip_address(NetworkInterface::get_default_instance()->get_ip_address())) {
         return NSAPI_UNSPEC;
     }
     return test.get_ip_version();
@@ -77,23 +72,13 @@ static void _ifup()
     NetworkInterface *net = NetworkInterface::get_default_instance();
     nsapi_error_t err = net->connect();
     TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, err);
-    SocketAddress address;
-    net->get_ip_address(&address);
-
-#define MESH 3
-#if MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == MESH
-    printf("Waiting for GLOBAL_UP\n");
-    while (net->get_connection_status() != NSAPI_STATUS_GLOBAL_UP) {
-        ThisThread::sleep_for(500);
-    }
-#endif
-    printf("MBED: TCPClient IP address is '%s'\n", address ? address.get_ip_address() : "null");
+    printf("MBED: TCPClient IP address is '%s'\n", net->get_ip_address() ? net->get_ip_address() : "null");
 }
 
 static void _ifdown()
 {
     NetworkInterface::get_default_instance()->disconnect();
-    tr_info("MBED: ifdown");
+    printf("MBED: ifdown\n");
 }
 
 nsapi_error_t tcpsocket_connect_to_srv(TCPSocket &sock, uint16_t port)
@@ -103,17 +88,17 @@ nsapi_error_t tcpsocket_connect_to_srv(TCPSocket &sock, uint16_t port)
     NetworkInterface::get_default_instance()->gethostbyname(ECHO_SERVER_ADDR, &tcp_addr);
     tcp_addr.set_port(port);
 
-    tr_info("MBED: Server '%s', port %d", tcp_addr.get_ip_address(), tcp_addr.get_port());
+    printf("MBED: Server '%s', port %d\n", tcp_addr.get_ip_address(), tcp_addr.get_port());
 
     nsapi_error_t err = sock.open(NetworkInterface::get_default_instance());
     if (err != NSAPI_ERROR_OK) {
-        tr_error("Error from sock.open: %d", err);
+        printf("Error from sock.open: %d\n", err);
         return err;
     }
 
     err = sock.connect(tcp_addr);
     if (err != NSAPI_ERROR_OK) {
-        tr_error("Error from sock.connect: %d", err);
+        printf("Error from sock.connect: %d\n", err);
         return err;
     }
 
@@ -222,6 +207,8 @@ Case cases[] = {
     Case("TCPSOCKET_OPEN_TWICE", TCPSOCKET_OPEN_TWICE),
     Case("TCPSOCKET_BIND_PORT", TCPSOCKET_BIND_PORT),
     Case("TCPSOCKET_BIND_PORT_FAIL", TCPSOCKET_BIND_PORT_FAIL),
+    Case("TCPSOCKET_BIND_ADDRESS_PORT", TCPSOCKET_BIND_ADDRESS_PORT),
+    Case("TCPSOCKET_BIND_ADDRESS_NULL", TCPSOCKET_BIND_ADDRESS_NULL),
     Case("TCPSOCKET_BIND_ADDRESS_INVALID", TCPSOCKET_BIND_ADDRESS_INVALID),
     Case("TCPSOCKET_BIND_ADDRESS", TCPSOCKET_BIND_ADDRESS),
     Case("TCPSOCKET_BIND_WRONG_TYPE", TCPSOCKET_BIND_WRONG_TYPE),
@@ -253,4 +240,3 @@ int main()
 
 #endif // ECHO_SERVER_ADDR
 #endif // !defined(MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE) || (MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == WIFI && !defined(MBED_CONF_NSAPI_DEFAULT_WIFI_SSID))
-#endif // !defined(MBED_CONF_RTOS_PRESENT)

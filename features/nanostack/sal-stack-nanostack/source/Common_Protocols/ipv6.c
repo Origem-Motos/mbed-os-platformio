@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2021, Pelion and affiliates.
+ * Copyright (c) 2013-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -212,12 +212,10 @@ buffer_routing_info_t *ipv6_buffer_route_to(buffer_t *buf, const uint8_t *next_h
      * reduce an existing entry if route has changed) */
     if (dest_entry->pmtu > outgoing_if->ipv6_neighbour_cache.link_mtu) {
         dest_entry->pmtu = outgoing_if->ipv6_neighbour_cache.link_mtu;
-        dest_entry->pmtu_lifetime = outgoing_if->pmtu_lifetime;
     }
     /* Route can also limit PMTU */
     if (dest_entry->pmtu > route->route_info.pmtu) {
         dest_entry->pmtu = route->route_info.pmtu;
-        dest_entry->pmtu_lifetime = outgoing_if->pmtu_lifetime;
     }
     /* Buffer then gets this PMTU (overwriting what we wrote from the route) */
     route->route_info.pmtu = dest_entry->pmtu;
@@ -615,16 +613,6 @@ buffer_t *ipv6_forwarding_down(buffer_t *buf)
 
     /* Routing code may say it needs to tunnel to add headers - loop back to IP layer if requested */
     if (exthdr_result == IPV6_EXTHDR_MODIFY_TUNNEL) {
-
-        if (buffer_data_length(buf) > IPV6_MIN_LINK_MTU) {
-            /* recover IP addresses that icmpv6_error needs, which routing code will have overwritten */
-            buf->src_sa.addr_type = ADDR_IPV6;
-            memcpy(buf->src_sa.address, buffer_data_pointer(buf) + IPV6_HDROFF_SRC_ADDR, 16);
-            buf->dst_sa.addr_type = ADDR_IPV6;
-            memcpy(buf->dst_sa.address, buffer_data_pointer(buf) + IPV6_HDROFF_DST_ADDR, 16);
-            return icmpv6_error(buf, NULL, ICMPV6_TYPE_ERROR_PACKET_TOO_BIG, 0, IPV6_MIN_LINK_MTU);
-        }
-
         /* Avoid an infinite loop in the event of routing code failure - never
          * let them ask for tunnelling more than once.
          */
@@ -635,7 +623,6 @@ buffer_t *ipv6_forwarding_down(buffer_t *buf)
         buf->options.tunnelled = true;
 
         buf->options.ip_extflags = 0;
-        buf->options.ipv6_use_min_mtu = -1;
 
         /* Provide tunnel source, unless already set */
         if (buf->src_sa.addr_type == ADDR_NONE) {
@@ -786,9 +773,6 @@ drop:
 static buffer_t *ipv6_handle_options(buffer_t *buf, protocol_interface_info_entry_t *cur, uint8_t *ptr, uint8_t nh, uint16_t payload_length, uint16_t *hdrlen_out, const sockaddr_t *ll_src, bool pre_fragment)
 {
     (void) nh;
-#ifndef HAVE_RPL
-    (void) ll_src;
-#endif
     if (payload_length < 2) {
         return icmpv6_error(buf, cur, ICMPV6_TYPE_ERROR_PARAMETER_PROBLEM, ICMPV6_CODE_PARAM_PRB_HDR_ERR, 4);
     }
@@ -869,9 +853,6 @@ len_err:
 
 static buffer_t *ipv6_handle_routing_header(buffer_t *buf, protocol_interface_info_entry_t *cur, uint8_t *ptr, uint16_t payload_length, uint16_t *hdrlen_out, bool *forward_out, bool pre_fragment)
 {
-#ifndef HAVE_RPL
-    (void) forward_out;
-#endif
     if (buf->options.ll_security_bypass_rx) {
         tr_warn("Routing header: Security check fail");
         protocol_stats_update(STATS_IP_RX_DROP, 1);
@@ -1016,7 +997,7 @@ static buffer_t *ipv6_consider_forwarding_unicast_packet(buffer_t *buf, protocol
 
     /* route_info.pmtu will cover limits from both the interface and the
      * route. As a bonus, it will also cover any PMTUD we happen to have done
-     * to that destination ourselves. Extra limits due to tunnelling are checked on tunnel entry in ipv6_down.
+     * to that destination ourselves, as well as mop up any tunnelling issues.
      */
     if (routing->route_info.pmtu < buffer_data_length(buf)) {
         buf->interface = cur;
@@ -1362,9 +1343,6 @@ buffer_t *ipv6_forwarding_up(buffer_t *buf)
         }
     } else { /* unicast */
         if (!for_us) {
-            if (cur->if_common_forwarding_out_cb) {
-                cur->if_common_forwarding_out_cb(cur, buf);
-            }
             return ipv6_consider_forwarding_unicast_packet(buf, cur, &ll_src);
         }
     }
@@ -1432,7 +1410,6 @@ buffer_t *ipv6_forwarding_up(buffer_t *buf)
 #endif
             default: {
                 if (buf->options.ll_security_bypass_rx) {
-                    tr_warn("Drop: unsecured by BAD Next header %u", *nh_ptr);
                     goto bad_nh;
                 }
                 buffer_socket_set(buf, socket_lookup_ipv6(*nh_ptr, &buf->dst_sa, &buf->src_sa, true));

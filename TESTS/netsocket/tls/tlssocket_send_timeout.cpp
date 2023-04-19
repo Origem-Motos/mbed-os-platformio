@@ -34,7 +34,6 @@ void TLSSOCKET_SEND_TIMEOUT()
         TEST_FAIL();
         return;
     }
-    sock.set_blocking(false);
 
     int err;
     Timer timer;
@@ -44,7 +43,7 @@ void TLSSOCKET_SEND_TIMEOUT()
         timer.start();
         err = sock.send(tx_buffer, sizeof(tx_buffer));
         timer.stop();
-        if ((err == sizeof(tx_buffer) || err == NSAPI_ERROR_WOULD_BLOCK) &&
+        if ((err == sizeof(tx_buffer)) &&
                 (timer.read_ms() <= 800)) {
             continue;
         }

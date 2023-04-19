@@ -14,9 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#if !defined(MBED_CONF_RTOS_PRESENT)
-#error [NOT_SUPPORTED] l3ip test cases require a RTOS to run
-#else
+
 
 #include "mbed.h"
 #include "greentea-client/test_env.h"
@@ -80,4 +78,3 @@ int main()
 {
     return !Harness::run(specification);
 }
-#endif

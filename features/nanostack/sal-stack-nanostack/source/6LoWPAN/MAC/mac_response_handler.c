@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020, Pelion and affiliates.
+ * Copyright (c) 2016-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -81,15 +81,6 @@ static void mac_mlme_frame_counter_confirmation_handle(protocol_interface_info_e
     info_entry->mac_parameters->security_frame_counter = *temp_ptr;
 }
 
-static void mac_mlme_cca_threshold_confirmation_handle(protocol_interface_info_entry_t *info_entry, mlme_get_conf_t *confirmation)
-{
-    if (confirmation->value_size < 1) {
-        return;
-    }
-    info_entry->mac_parameters->cca_thr_table.number_of_channels = confirmation->value_size;
-    info_entry->mac_parameters->cca_thr_table.cca_threshold_table = (int8_t *)confirmation->value_pointer;
-}
-
 static void mac_mlme_get_confirmation_handler(protocol_interface_info_entry_t *info_entry, mlme_get_conf_t *confirmation)
 {
 
@@ -103,10 +94,6 @@ static void mac_mlme_get_confirmation_handler(protocol_interface_info_entry_t *i
 
         case macFrameCounter:
             mac_mlme_frame_counter_confirmation_handle(info_entry, confirmation);
-            break;
-
-        case macCCAThreshold:
-            mac_mlme_cca_threshold_confirmation_handle(info_entry, confirmation);
             break;
 
         default:
@@ -133,7 +120,6 @@ void mcps_data_indication_handler(const mac_api_t *api, const mcps_data_ind_t *d
 void mcps_purge_confirm_handler(const mac_api_t *api, mcps_purge_conf_t *data)
 {
     (void)api;
-    (void)data;
     tr_info("MCPS Data Purge confirm status %u, for handle %u", data->status, data->msduHandle);
 }
 

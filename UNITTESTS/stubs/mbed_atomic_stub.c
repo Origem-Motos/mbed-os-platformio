@@ -57,143 +57,113 @@ uint32_t core_util_atomic_exchange_u32(volatile uint32_t *ptr, uint32_t desiredV
 
 uint8_t core_util_atomic_incr_u8(volatile uint8_t *valuePtr, uint8_t delta)
 {
-    return *valuePtr += delta;
+    return 0;
 }
 
 uint16_t core_util_atomic_incr_u16(volatile uint16_t *valuePtr, uint16_t delta)
 {
-    return *valuePtr += delta;
+    return 0;
 }
 
 uint32_t core_util_atomic_incr_u32(volatile uint32_t *valuePtr, uint32_t delta)
 {
-    return *valuePtr += delta;
+    return 0;
 }
 
 
 uint8_t core_util_atomic_decr_u8(volatile uint8_t *valuePtr, uint8_t delta)
 {
-    return *valuePtr -= delta;
+    return 0;
 }
 
 uint16_t core_util_atomic_decr_u16(volatile uint16_t *valuePtr, uint16_t delta)
 {
-    return *valuePtr -= delta;
+    return 0;
 }
 
 uint32_t core_util_atomic_decr_u32(volatile uint32_t *valuePtr, uint32_t delta)
 {
-    return *valuePtr -= delta;
+    return 0;
 }
 
 
 uint8_t core_util_atomic_fetch_add_u8(volatile uint8_t *valuePtr, uint8_t arg)
 {
-    uint8_t v = *valuePtr;
-    *valuePtr += arg;
-    return v;
+    return 0;
 }
 
 uint16_t core_util_atomic_fetch_add_u16(volatile uint16_t *valuePtr, uint16_t arg)
 {
-    uint16_t v = *valuePtr;
-    *valuePtr += arg;
-    return v;
+    return 0;
 }
 
 uint32_t core_util_atomic_fetch_add_u32(volatile uint32_t *valuePtr, uint32_t arg)
 {
-    uint32_t v = *valuePtr;
-    *valuePtr += arg;
-    return v;
+    return 0;
 }
 
 
 uint8_t core_util_atomic_fetch_sub_u8(volatile uint8_t *valuePtr, uint8_t arg)
 {
-    uint8_t v = *valuePtr;
-    *valuePtr -= arg;
-    return v;
+    return 0;
 }
 
 uint16_t core_util_atomic_fetch_sub_u16(volatile uint16_t *valuePtr, uint16_t arg)
 {
-    uint16_t v = *valuePtr;
-    *valuePtr -= arg;
-    return v;
+    return 0;
 }
 
 uint32_t core_util_atomic_fetch_sub_u32(volatile uint32_t *valuePtr, uint32_t arg)
 {
-    uint32_t v = *valuePtr;
-    *valuePtr -= arg;
-    return v;
+    return 0;
 }
 
 
 uint8_t core_util_atomic_fetch_and_u8(volatile uint8_t *valuePtr, uint8_t arg)
 {
-    uint8_t v = *valuePtr;
-    *valuePtr &= arg;
-    return v;
+    return 0;
 }
 
 uint16_t core_util_atomic_fetch_and_u16(volatile uint16_t *valuePtr, uint16_t arg)
 {
-    uint16_t v = *valuePtr;
-    *valuePtr &= arg;
-    return v;
+    return 0;
 }
 
 uint32_t core_util_atomic_fetch_and_u32(volatile uint32_t *valuePtr, uint32_t arg)
 {
-    uint32_t v = *valuePtr;
-    *valuePtr &= arg;
-    return v;
+    return 0;
 }
 
 
 uint8_t core_util_atomic_fetch_or_u8(volatile uint8_t *valuePtr, uint8_t arg)
 {
-    uint8_t v = *valuePtr;
-    *valuePtr |= arg;
-    return v;
+    return 0;
 }
 
 uint16_t core_util_atomic_fetch_or_u16(volatile uint16_t *valuePtr, uint16_t arg)
 {
-    uint16_t v = *valuePtr;
-    *valuePtr |= arg;
-    return v;
+    return 0;
 }
 
 uint32_t core_util_atomic_fetch_or_u32(volatile uint32_t *valuePtr, uint32_t arg)
 {
-    uint32_t v = *valuePtr;
-    *valuePtr |= arg;
-    return v;
+    return 0;
 }
 
 
 uint8_t core_util_atomic_fetch_xor_u8(volatile uint8_t *valuePtr, uint8_t arg)
 {
-    uint8_t v = *valuePtr;
-    *valuePtr ^= arg;
-    return v;
+    return 0;
 }
 
 uint16_t core_util_atomic_fetch_xor_u16(volatile uint16_t *valuePtr, uint16_t arg)
 {
-    uint16_t v = *valuePtr;
-    *valuePtr ^= arg;
-    return v;
+    return 0;
 }
 
 uint32_t core_util_atomic_fetch_xor_u32(volatile uint32_t *valuePtr, uint32_t arg)
 {
-    uint32_t v = *valuePtr;
-    *valuePtr ^= arg;
-    return v;
+    return 0;
 }
 
 

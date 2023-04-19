@@ -32,11 +32,6 @@ enum {
     APPL_BACKHAUL_LINK_UP
 };
 
-
-typedef uint64_t ns_time_read_cb(void);
-typedef void ns_time_write_cb(uint64_t);
-
-
 /*
  * \brief Send application connect event to receiver tasklet to
  * ensure that connection is made in right tasklet.
@@ -44,8 +39,6 @@ typedef void ns_time_write_cb(uint64_t);
 void mesh_system_send_connect_event(uint8_t receiver);
 
 int mesh_system_set_file_system_root_path(const char *root_path);
-
-void mesh_system_time_callback_set(ns_time_read_cb, ns_time_write_cb);
 
 /*
  * \brief Initialize mesh system.

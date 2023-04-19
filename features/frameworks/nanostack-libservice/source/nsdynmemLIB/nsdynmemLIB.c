@@ -1,22 +1,20 @@
 /*
- * Copyright (c) 2014-2020, Pelion and affiliates.
+ * Copyright (c) 2014-2019 ARM Limited. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * Licensed under the Apache License, Version 2.0 (the License); you may
+ * not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * distributed under the License is distributed on an AS IS BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
 #include <stdint.h>
 #include <string.h>
-#undef NSDYNMEM_TRACKER_ENABLED
 #include "nsdynmemLIB.h"
 #include "platform/arm_hal_interrupt.h"
 #include <stdlib.h>
@@ -49,7 +47,6 @@ struct ns_mem_book {
     ns_mem_heap_size_t temporary_alloc_heap_limit;   /* Amount of reserved heap temporary alloc can't exceed */
 };
 
-static mem_stat_t default_stats;
 static ns_mem_book_t *default_book; // heap pointer for original "ns_" API use
 
 // size of a hole_t in our word units
@@ -165,14 +162,12 @@ ns_mem_book_t *ns_mem_init(void *heap, ns_mem_heap_size_t h_size,
     ns_list_init(&book->holes_list);
     ns_list_add_to_start(&book->holes_list, hole_from_block_start(book->heap_main[0]));
 
+    book->mem_stat_info_ptr = info_ptr;
+    //RESET Memory by Hea Len
     if (info_ptr) {
-        book->mem_stat_info_ptr = info_ptr;
-    } else {
-        book->mem_stat_info_ptr = &default_stats;
+        memset(book->mem_stat_info_ptr, 0, sizeof(mem_stat_t));
+        book->mem_stat_info_ptr->heap_sector_size = book->heap_size;
     }
-    //RESET Memory by Heap Len
-    memset(book->mem_stat_info_ptr, 0, sizeof(mem_stat_t));
-    book->mem_stat_info_ptr->heap_sector_size = book->heap_size;
     book->temporary_alloc_heap_limit = book->heap_size / 100 * (100 - TEMPORARY_ALLOC_FREE_HEAP_THRESHOLD);
 #endif
     //There really is no support to standard malloc in this library anymore
@@ -239,7 +234,9 @@ int ns_mem_region_add(ns_mem_book_t *book, void *region_ptr, ns_mem_heap_size_t 
     // adjust total heap size with new hole
     book->heap_size += region_size;
 
-    book->mem_stat_info_ptr->heap_sector_size = book->heap_size;
+    if (book->mem_stat_info_ptr) {
+        book->mem_stat_info_ptr->heap_sector_size = book->heap_size;
+    }
 
     // adjust temporary allocation limits to match new heap
     book->temporary_alloc_heap_limit = book->heap_size / 100 * (100 - TEMPORARY_ALLOC_FREE_HEAP_THRESHOLD);
@@ -268,8 +265,8 @@ int ns_mem_set_temporary_alloc_free_heap_threshold(ns_mem_book_t *book, uint8_t 
 #ifndef STANDARD_MALLOC
     ns_mem_heap_size_t heap_limit = 0;
 
-    if (!book) {
-        // no book
+    if (!book || !book->mem_stat_info_ptr) {
+        // no book or mem_stats
         return -1;
     }
 
@@ -307,25 +304,25 @@ extern int ns_dyn_mem_set_temporary_alloc_free_heap_threshold(uint8_t free_heap_
 #ifndef STANDARD_MALLOC
 static void dev_stat_update(mem_stat_t *mem_stat_info_ptr, mem_stat_update_t type, ns_mem_block_size_t size)
 {
-
-    switch (type) {
-        case DEV_HEAP_ALLOC_OK:
-            mem_stat_info_ptr->heap_sector_alloc_cnt++;
-            mem_stat_info_ptr->heap_sector_allocated_bytes += size;
-            if (mem_stat_info_ptr->heap_sector_allocated_bytes_max < mem_stat_info_ptr->heap_sector_allocated_bytes) {
-                mem_stat_info_ptr->heap_sector_allocated_bytes_max = mem_stat_info_ptr->heap_sector_allocated_bytes;
-            }
-            mem_stat_info_ptr->heap_alloc_total_bytes += size;
-            break;
-        case DEV_HEAP_ALLOC_FAIL:
-            mem_stat_info_ptr->heap_alloc_fail_cnt++;
-            break;
-        case DEV_HEAP_FREE:
-            mem_stat_info_ptr->heap_sector_alloc_cnt--;
-            mem_stat_info_ptr->heap_sector_allocated_bytes -= size;
-            break;
+    if (mem_stat_info_ptr) {
+        switch (type) {
+            case DEV_HEAP_ALLOC_OK:
+                mem_stat_info_ptr->heap_sector_alloc_cnt++;
+                mem_stat_info_ptr->heap_sector_allocated_bytes += size;
+                if (mem_stat_info_ptr->heap_sector_allocated_bytes_max < mem_stat_info_ptr->heap_sector_allocated_bytes) {
+                    mem_stat_info_ptr->heap_sector_allocated_bytes_max = mem_stat_info_ptr->heap_sector_allocated_bytes;
+                }
+                mem_stat_info_ptr->heap_alloc_total_bytes += size;
+                break;
+            case DEV_HEAP_ALLOC_FAIL:
+                mem_stat_info_ptr->heap_alloc_fail_cnt++;
+                break;
+            case DEV_HEAP_FREE:
+                mem_stat_info_ptr->heap_sector_alloc_cnt--;
+                mem_stat_info_ptr->heap_sector_allocated_bytes -= size;
+                break;
+        }
     }
-
 }
 
 static ns_mem_word_size_t convert_allocation_size(ns_mem_book_t *book, ns_mem_block_size_t requested_bytes)
@@ -366,7 +363,7 @@ static void *ns_mem_internal_alloc(ns_mem_book_t *book, const ns_mem_block_size_
         return NULL;
     }
 
-    if (direction == 1) {
+    if (book->mem_stat_info_ptr && direction == 1) {
         if (book->mem_stat_info_ptr->heap_sector_allocated_bytes > book->temporary_alloc_heap_limit) {
             /* Not enough heap for temporary memory allocation */
             dev_stat_update(book->mem_stat_info_ptr, DEV_HEAP_ALLOC_FAIL, 0);
@@ -444,14 +441,14 @@ static void *ns_mem_internal_alloc(ns_mem_book_t *book, const ns_mem_block_size_
     block_ptr[1 + data_size] = data_size;
 
 done:
-
-
-    if (block_ptr) {
-        //Update Allocate OK
-        dev_stat_update(book->mem_stat_info_ptr, DEV_HEAP_ALLOC_OK, (data_size + 2) * sizeof(ns_mem_word_size_t));
-    } else {
-        //Update Allocate Fail, second parameter is used for stats
-        dev_stat_update(book->mem_stat_info_ptr, DEV_HEAP_ALLOC_FAIL, 0);
+    if (book->mem_stat_info_ptr) {
+        if (block_ptr) {
+            //Update Allocate OK
+            dev_stat_update(book->mem_stat_info_ptr, DEV_HEAP_ALLOC_OK, (data_size + 2) * sizeof(ns_mem_word_size_t));
+        } else {
+            //Update Allocate Fail, second parameter is used for stats
+            dev_stat_update(book->mem_stat_info_ptr, DEV_HEAP_ALLOC_FAIL, 0);
+        }
     }
     platform_exit_critical();
 
@@ -622,8 +619,10 @@ void ns_mem_free(ns_mem_book_t *book, void *block)
             heap_failure(book, NS_DYN_MEM_HEAP_SECTOR_CORRUPTED);
         } else {
             ns_mem_free_and_merge_with_adjacent_blocks(book, ptr, size);
-            //Update Free Counter
-            dev_stat_update(book->mem_stat_info_ptr, DEV_HEAP_FREE, (size + 2) * sizeof(ns_mem_word_size_t));
+            if (book->mem_stat_info_ptr) {
+                //Update Free Counter
+                dev_stat_update(book->mem_stat_info_ptr, DEV_HEAP_FREE, (size + 2) * sizeof(ns_mem_word_size_t));
+            }
         }
     }
 

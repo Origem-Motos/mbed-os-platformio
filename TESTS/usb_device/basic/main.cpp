@@ -14,11 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#if !defined(MBED_CONF_RTOS_PRESENT)
-#error [NOT_SUPPORTED] USB stack and test cases require RTOS to run.
-#else
-
 #include <stdio.h>
 #include <string.h>
 #include "mbed.h"
@@ -665,4 +660,3 @@ int main()
 }
 
 #endif // !defined(DEVICE_USBDEVICE) || !DEVICE_USBDEVICE
-#endif // !defined(MBED_CONF_RTOS_PRESENT)

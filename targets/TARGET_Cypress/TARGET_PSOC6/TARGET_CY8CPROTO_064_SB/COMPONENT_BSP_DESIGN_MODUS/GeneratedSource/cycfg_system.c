@@ -4,9 +4,7 @@
 * Description:
 * System configuration
 * This file was automatically generated and should not be modified.
-* Device Configurator: 2.0.0.1483
-* Device Support Library (../../../../output/psoc6/psoc6pdl): 1.4.0.1571
-*
+* 
 ********************************************************************************
 * Copyright 2017-2019 Cypress Semiconductor Corporation
 * SPDX-License-Identifier: Apache-2.0
@@ -73,7 +71,7 @@ static const cy_stc_fll_manual_config_t srss_0_clock_0_fll_0_fllConfig =
 	.refDiv = 20U,
 	.ccoRange = CY_SYSCLK_FLL_CCO_RANGE4,
 	.enableOutputDiv = true,
-	.lockTolerance = 10U,
+	.lockTolerance = 4U,
 	.igain = 9U,
 	.pgain = 5U,
 	.settlingCount = 8U,
@@ -203,7 +201,7 @@ __STATIC_INLINE void Cy_SysClk_ClkPath4Init()
 }
 __STATIC_INLINE void Cy_SysClk_ClkPeriInit()
 {
-    Cy_SysClk_ClkPeriSetDivider(0U);
+    Cy_SysClk_ClkPeriSetDivider(1U);
 }
 __STATIC_INLINE void Cy_SysClk_Pll0Init()
 {
@@ -545,22 +543,22 @@ void init_cycfg_system(void)
 	SystemCoreClockUpdate();
 
 #if defined (CY_USING_HAL)
-	cyhal_hwmgr_reserve(&srss_0_clock_0_pathmux_0_obj);
+		cyhal_hwmgr_reserve(&srss_0_clock_0_pathmux_0_obj);
 #endif //defined (CY_USING_HAL)
 
 #if defined (CY_USING_HAL)
-	cyhal_hwmgr_reserve(&srss_0_clock_0_pathmux_1_obj);
+		cyhal_hwmgr_reserve(&srss_0_clock_0_pathmux_1_obj);
 #endif //defined (CY_USING_HAL)
 
 #if defined (CY_USING_HAL)
-	cyhal_hwmgr_reserve(&srss_0_clock_0_pathmux_2_obj);
+		cyhal_hwmgr_reserve(&srss_0_clock_0_pathmux_2_obj);
 #endif //defined (CY_USING_HAL)
 
 #if defined (CY_USING_HAL)
-	cyhal_hwmgr_reserve(&srss_0_clock_0_pathmux_3_obj);
+		cyhal_hwmgr_reserve(&srss_0_clock_0_pathmux_3_obj);
 #endif //defined (CY_USING_HAL)
 
 #if defined (CY_USING_HAL)
-	cyhal_hwmgr_reserve(&srss_0_clock_0_pathmux_4_obj);
+		cyhal_hwmgr_reserve(&srss_0_clock_0_pathmux_4_obj);
 #endif //defined (CY_USING_HAL)
 }

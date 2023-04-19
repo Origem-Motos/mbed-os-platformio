@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2020, Pelion and affiliates.
+ * Copyright (c) 2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,7 @@
 
 struct thread_neighbor_class_s;
 
-/** Thread Spesific ModeFlags */
+/** Thead Spesific ModeFlags */
 #define MLE_THREAD_SECURED_DATA_REQUEST 0x04
 #define MLE_THREAD_REQ_FULL_DATA_SET 0x01
 

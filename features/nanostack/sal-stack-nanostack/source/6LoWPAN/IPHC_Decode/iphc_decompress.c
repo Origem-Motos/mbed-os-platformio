@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, Pelion and affiliates.
+ * Copyright (c) 2014-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -249,7 +249,7 @@ static bool decompress_mc_addr(const lowpan_context_list_t *context_list, uint8_
             *in_ptr = in;
             return true;
         case HC_48BIT_CONTEXT_MULTICAST: {
-            lowpan_context_t *ctx = lowpan_context_get_by_id(context_list, context);
+            lowpan_context_t *ctx = lowpan_contex_get_by_id(context_list, context);
             if (!ctx) {
                 return false;
             }
@@ -312,7 +312,7 @@ static bool decompress_addr(const lowpan_context_list_t *context_list, uint8_t *
     }
 
     if (mode & HC_DSTADR_COMP) {
-        lowpan_context_t *ctx = lowpan_context_get_by_id(context_list, context);
+        lowpan_context_t *ctx = lowpan_contex_get_by_id(context_list, context);
         if (!ctx) {
             return false;
         }

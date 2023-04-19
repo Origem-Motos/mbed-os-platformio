@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, Pelion and affiliates.
+ * Copyright (c) 2018-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -108,8 +108,8 @@ static const uint8_t *kde_search(const uint8_t *ptr, uint16_t len, const uint8_t
     while (len >= KDE_MIN_LEN) {
         uint16_t kde_len = ptr[1] + KDE_FIXED_LEN;
 
-        // For the type 0xdd the length shall be at least 6 */
-        if ((ptr[KDE_TYPE_INDEX] == 0xdd && kde_len < KDE_MIN_LEN) || kde_len > len) {
+        // Type shall be 0xdd and length shall be at least 6 */
+        if (ptr[KDE_TYPE_INDEX] != 0xdd || kde_len < KDE_MIN_LEN || kde_len > len) {
             return NULL;
         }
 

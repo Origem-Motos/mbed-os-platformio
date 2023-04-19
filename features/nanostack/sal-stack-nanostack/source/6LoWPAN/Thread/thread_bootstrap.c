@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, Pelion and affiliates.
+ * Copyright (c) 2014-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -137,11 +137,11 @@ static void thread_bootstrap_pbbr_update_done(struct protocol_interface_info_ent
 static void thread_neighbor_remove(mac_neighbor_table_entry_t *entry_ptr, void *user_data)
 {
     protocol_interface_info_entry_t *cur = user_data;
-    lowpan_adaptation_neigh_remove_free_tx_tables(cur, entry_ptr);
+    lowpan_adaptation_remove_free_indirect_table(cur, entry_ptr);
 
     thread_reset_neighbour_info(cur, entry_ptr);
     //Removes ETX neighbor
-    etx_neighbor_remove(cur->id, entry_ptr->index, entry_ptr->mac64);
+    etx_neighbor_remove(cur->id, entry_ptr->index);
     //Remove MLE frame counter info
     mle_service_frame_counter_entry_delete(cur->id, entry_ptr->index);
 }
@@ -755,8 +755,6 @@ int thread_link_configuration_activate(protocol_interface_info_entry_t *cur, lin
         return -1;
     }
 
-    mac_helper_mac_device_description_pan_id_update(cur->id, linkConfiguration->panId);
-
     thread_configuration_thread_activate(cur, linkConfiguration);
     thread_configuration_security_activate(cur, linkConfiguration);
     thread_configuration_6lowpan_activate(cur);
@@ -901,7 +899,7 @@ void thread_interface_init(protocol_interface_info_entry_t *cur)
 {
     thread_discovery_reset(cur->id);
     thread_routing_set_mesh_callbacks(cur);
-    dhcp_client_init(cur->id, DHCPV6_DUID_HARDWARE_EUI64_TYPE);
+    dhcp_client_init(cur->id);
     dhcp_client_configure(cur->id, false, false, false);
     thread_management_client_init(cur->id);
     thread_bootstrap_address_registration_init();
@@ -955,7 +953,7 @@ static void thread_interface_bootsrap_mode_init(protocol_interface_info_entry_t 
         cur->thread_info->thread_device_mode = THREAD_DEVICE_MODE_SLEEPY_END_DEVICE;
         //SET Sleepy Host To RX on Idle mode for bootsrap
         nwk_thread_host_control(cur, NET_HOST_RX_ON_IDLE, 0);
-        cur->thread_info->childUpdateReqTimer = 8 * cur->thread_info->host_link_timeout / 10;
+        cur->thread_info->childUpdateReqTimer = 0.8 * cur->thread_info->host_link_timeout;
     } else {
         tr_debug("Set End node Mode");
         cur->thread_info->thread_device_mode = THREAD_DEVICE_MODE_END_DEVICE;
@@ -2308,7 +2306,7 @@ void thread_bootstrap_state_machine(protocol_interface_info_entry_t *cur)
             break;
 
         case ER_BOOTSRAP_DONE:
-            tr_info("Thread SM:Bootstrap Done");
+            tr_debug("Thread SM:Bootstrap Done");
             cur->nwk_nd_re_scan_count = 0;
             break;
         case ER_BOOTSTRAP_SCAN_FAIL:
@@ -2888,7 +2886,7 @@ void thread_bootstrap_network_prefixes_process(protocol_interface_info_entry_t *
                     thread_addr_write_mesh_local_16(addr, curBorderRouter->routerID, cur->thread_info);
                     /* Do not allow multiple DHCP solicits from one prefix => delete previous */
                     dhcp_client_global_address_delete(cur->id, NULL, curPrefix->servicesPrefix);
-                    if (dhcp_client_get_global_address(cur->id, addr, curPrefix->servicesPrefix, thread_dhcp_client_gua_error_cb) == 0) {
+                    if (dhcp_client_get_global_address(cur->id, addr, curPrefix->servicesPrefix, cur->mac, DHCPV6_DUID_HARDWARE_EUI64_TYPE, thread_dhcp_client_gua_error_cb) == 0) {
                         tr_debug("GP Address Requested");
                     }
                 }

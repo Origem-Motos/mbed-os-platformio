@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2021, Pelion and affiliates.
+ * Copyright (c) 2014-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,6 +65,7 @@
 #include "6LoWPAN/Thread/thread_bootstrap.h"
 #include "6LoWPAN/Thread/thread_routing.h"
 #include "6LoWPAN/Thread/thread_management_internal.h"
+#include "6LoWPAN/ws/ws_bootstrap.h"
 #include "6LoWPAN/ws/ws_common.h"
 #ifdef HAVE_WS
 #include "6LoWPAN/ws/ws_pae_controller.h"
@@ -82,7 +83,6 @@
 #include "Service_Libs/load_balance/load_balance_api.h"
 #include "Service_Libs/pan_blacklist/pan_blacklist_api.h"
 #include "Service_Libs/etx/etx.h"
-#include "libNET/src/net_dns_internal.h"
 
 #include "mac_api.h"
 #include "ethernet_mac_api.h"
@@ -264,7 +264,6 @@ void core_timer_event_handle(uint16_t ticksUpdate)
                         cur->nwk_wpan_nvm_api->nvm_params_update_cb(cur->nwk_wpan_nvm_api, false);
                     }
                     etx_cache_timer(cur->id, seconds);
-                    lowpan_adaptation_interface_slow_timer(cur);
                 }
             } else if (cur->nwk_id == IF_IPV6) {
                 //Slow Pointer Update
@@ -305,8 +304,6 @@ void core_timer_event_handle(uint16_t ticksUpdate)
         ipv6_destination_cache_timer(seconds);
         ipv6_frag_timer(seconds);
         cipv6_frag_timer(seconds);
-        net_dns_timer_seconds(seconds);
-
 #ifdef HAVE_WS
         ws_pae_controller_slow_timer(seconds);
 #endif
@@ -461,7 +458,6 @@ static void protocol_core_base_init(protocol_interface_info_entry_t *entry, nwk_
     entry->ipv6_configure = NULL;
     entry->if_lowpan_security_params = NULL;
     entry->if_ns_transmit = NULL;
-    entry->if_common_forwarding_out_cb = NULL;
     entry->if_special_forwarding = NULL;
     entry->if_snoop = NULL;
     entry->if_icmp_handler = NULL;
@@ -607,7 +603,6 @@ static protocol_interface_info_entry_t *protocol_core_interface_6lowpan_entry_ge
     entry->mac_parameters->mac_prev_key_attribute_id = 0;
     entry->mac_parameters->mac_default_key_attribute_id = 1;
     entry->mac_parameters->mac_next_key_attribute_id = 2;
-    entry->mac_parameters->mac_default_key_index = 0;
 
     entry->beacon_cb = beacon_received;
 
@@ -801,18 +796,6 @@ protocol_interface_info_entry_t *protocol_stack_interface_info_get_by_fhss_api(c
     }
 #else
     (void)fhss_api;
-#endif //HAVE_WS
-    return NULL;
-}
-
-protocol_interface_info_entry_t *protocol_stack_interface_info_get_wisun_mesh(void)
-{
-#ifdef HAVE_WS
-    ns_list_foreach(protocol_interface_info_entry_t, cur, &protocol_interface_info_list) {
-        if (cur->ws_info) {
-            return cur;
-        }
-    }
 #endif //HAVE_WS
     return NULL;
 }
@@ -1133,10 +1116,10 @@ void nwk_bootsrap_state_update(arm_nwk_interface_status_type_e posted_event, pro
             default:
                 mac_data_poll_protocol_poll_mode_disable(cur);
                 if (!cur->rpl_domain) {
-                    tr_info("NON RPL Ready");
+                    tr_debug("NON RPL Ready");
                     //nwk_protocol_poll_mode_disable(cur->nwk_id, 0);
                 } else {
-                    tr_info("RPL Ready");
+                    tr_debug("RPL Ready");
                 }
         }
     } else {
@@ -1159,7 +1142,7 @@ void net_bootsrap_cb_run(uint8_t event)
             if (thread_info(cur)) {
                 thread_bootstrap_state_machine(cur);
             } else if (ws_info(cur)) {
-                ws_common_state_machine(cur);
+                ws_bootstrap_state_machine(cur);
             } else {
                 protocol_6lowpan_bootstrap(cur);
             }

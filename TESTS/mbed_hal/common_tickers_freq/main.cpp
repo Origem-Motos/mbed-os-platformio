@@ -20,9 +20,6 @@
  * freqency is valid.
  */
 
-#if !defined(MBED_CONF_RTOS_PRESENT)
-#error [NOT_SUPPORTED] common tickers frequency test cases require a RTOS to run.
-#else
 
 #include "mbed.h"
 #include "greentea-client/test_env.h"
@@ -209,4 +206,3 @@ int main()
 }
 
 #endif // defined(SKIP_TIME_DRIFT_TESTS) || !DEVICE_USTICKER
-#endif // !defined(MBED_RTOS_CONF_PRESENT)

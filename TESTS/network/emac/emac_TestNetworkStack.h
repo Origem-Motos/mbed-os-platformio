@@ -86,26 +86,12 @@ public:
          */
         virtual char *get_mac_address(char *buf, nsapi_size_t buflen);
 
-        /** Set MAC address on the network interface
-         *
-         *  @param          mac_addr Buffer containing the MAC address in hexadecimal format.
-         *  @param          addr_len Length of provided buffer in bytes (6 or 8)
-         *  @retval         NSAPI_ERROR_OK on success
-         *  @retval         NSAPI_ERROR_UNSUPPORTED if this feature is not supported
-         *  @retval         NSAPI_ERROR_PARAMETER if address is not valid
-         *  @retval         NSAPI_ERROR_BUSY if address can't be set.
-         */
-        virtual nsapi_error_t set_mac_address(uint8_t *mac_addr, nsapi_size_t addr_len);
-
         /** Copies IP address of the network interface to user supplied buffer
          *
          * @param    buf        buffer to which IP address will be copied as "W:X:Y:Z"
          * @param    buflen     size of supplied buffer
          * @return              Pointer to a buffer, or NULL if the buffer is too small
          */
-        virtual nsapi_error_t get_ip_address(SocketAddress *address);
-
-        MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
         virtual char *get_ip_address(char *buf, nsapi_size_t buflen);
 
         /** Copies netmask of the network interface to user supplied buffer
@@ -114,9 +100,6 @@ public:
          * @param    buflen     size of supplied buffer
          * @return              Pointer to a buffer, or NULL if the buffer is too small
          */
-        virtual nsapi_error_t get_netmask(SocketAddress *address);
-
-        MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
         virtual char *get_netmask(char *buf, nsapi_size_t buflen);
 
         /** Copies gateway address of the network interface to user supplied buffer
@@ -125,9 +108,6 @@ public:
          * @param    buflen     size of supplied buffer
          * @return              Pointer to a buffer, or NULL if the buffer is too small
          */
-        virtual nsapi_error_t get_gateway(SocketAddress *address);
-
-        MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
         virtual char *get_gateway(char *buf, nsapi_size_t buflen);
 
     private:

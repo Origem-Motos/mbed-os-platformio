@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, 2019-2021, Pelion and affiliates.
+ * Copyright (c) 2015-2017, 2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,9 +21,6 @@
 #include "Core/include/ns_address_internal.h"
 #include "rpl_control.h"
 
-bool rpl_policy_force_tunnel(void);
-void rpl_policy_force_tunnel_set(bool enable);
-
 bool rpl_policy_join_instance(rpl_domain_t *domain, uint8_t instance_id, const uint8_t *dodagid);
 bool rpl_policy_join_dodag(rpl_domain_t *domain, uint8_t g_mop_prf, uint8_t instance_id, const uint8_t *dodagid);
 bool rpl_policy_join_config(rpl_domain_t *domain, const rpl_dodag_conf_t *conf, bool *leaf_only);
@@ -32,13 +29,8 @@ bool rpl_policy_request_dao_acks(const rpl_domain_t *domain, uint8_t mop);
 uint16_t rpl_policy_initial_dao_ack_wait(const rpl_domain_t *domain, uint8_t mop);
 void rpl_policy_set_initial_dao_ack_wait(uint16_t timeout_in_ms);
 
-void rpl_policy_set_minimum_dao_target_refresh(uint16_t seconds);
-uint16_t rpl_policy_minimum_dao_target_refresh(void);
-
 void rpl_policy_set_dao_retry_count(uint8_t count);
 int8_t rpl_policy_dao_retry_count();
-
-int rpl_policy_forward_link_etx_threshold_set(uint16_t etx_full_forward, uint16_t etx_full_drop);
 
 int8_t rpl_policy_srh_next_hop_interface(rpl_domain_t *domain, int8_t if_id, const uint8_t *next_hop);
 uint16_t rpl_policy_modify_downward_cost_to_root_neighbour(rpl_domain_t *domain, int8_t if_id, const uint8_t *next_hop, uint16_t cost);
@@ -67,7 +59,6 @@ uint_fast8_t rpl_policy_of0_rank_factor(const rpl_domain_t *domain);
 bool rpl_policy_of0_dodag_preference_supersedes_grounded(const rpl_domain_t *domain);
 uint_fast8_t rpl_policy_of0_max_backup_successors(const rpl_domain_t *domain);
 
-void rpl_policy_set_mrhof_parent_set_size(uint8_t parent_set_size);
 uint_fast8_t rpl_policy_mrhof_parent_set_size(const rpl_domain_t *domain);
 uint16_t rpl_policy_mrhof_max_link_metric(const rpl_domain_t *domain);
 uint16_t rpl_policy_mrhof_parent_switch_threshold(const rpl_domain_t *domain);
@@ -76,7 +67,5 @@ bool rpl_policy_parent_confirmation_requested(void);
 void rpl_policy_set_parent_confirmation_request(bool confirmation_requested);
 uint8_t rpl_policy_dio_multicast_config_advertisment_min_count(void);
 void rpl_policy_set_dio_multicast_config_advertisment_min_count(uint8_t min_count);
-uint16_t rpl_policy_address_registration_timeout();
-void rpl_policy_set_address_registration_timeout(uint16_t timeout_in_minutes);
 
 #endif /* RPL_POLICY_H_ */

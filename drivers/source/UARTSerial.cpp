@@ -28,21 +28,12 @@ UARTSerial::UARTSerial(PinName tx, PinName rx, int baud) :
     _blocking(true),
     _tx_irq_enabled(false),
     _rx_irq_enabled(false),
+    _tx_enabled(true),
+    _rx_enabled(true),
     _dcd_irq(NULL)
 {
     /* Attatch IRQ routines to the serial device. */
-    update_rx_irq();
-}
-
-UARTSerial::UARTSerial(const serial_pinmap_t &static_pinmap, int baud) :
-    SerialBase(static_pinmap, baud),
-    _blocking(true),
-    _tx_irq_enabled(false),
-    _rx_irq_enabled(false),
-    _dcd_irq(NULL)
-{
-    /* Attatch IRQ routines to the serial device. */
-    update_rx_irq();
+    enable_rx_irq();
 }
 
 UARTSerial::~UARTSerial()
@@ -192,7 +183,14 @@ ssize_t UARTSerial::write(const void *buffer, size_t length)
             data_written++;
         }
 
-        update_tx_irq();
+        core_util_critical_section_enter();
+        if (_tx_enabled && !_tx_irq_enabled) {
+            UARTSerial::tx_irq();                // only write to hardware in one place
+            if (!_txbuf.empty()) {
+                enable_tx_irq();
+            }
+        }
+        core_util_critical_section_exit();
     }
 
     api_unlock();
@@ -227,7 +225,14 @@ ssize_t UARTSerial::read(void *buffer, size_t length)
         data_read++;
     }
 
-    update_rx_irq();
+    core_util_critical_section_enter();
+    if (_rx_enabled && !_rx_irq_enabled) {
+        UARTSerial::rx_irq();               // only read from hardware in one place
+        if (!_rxbuf.full()) {
+            enable_rx_irq();
+        }
+    }
+    core_util_critical_section_exit();
 
     api_unlock();
 
@@ -334,40 +339,25 @@ void UARTSerial::tx_irq(void)
     }
 }
 
-void UARTSerial::update_rx_irq()
+/* These are all called from critical section */
+void UARTSerial::enable_rx_irq()
 {
-    core_util_critical_section_enter();
-    if (_rx_enabled && !_rx_irq_enabled) {
-        UARTSerial::rx_irq();
-        if (!_rxbuf.full()) {
-            SerialBase::attach(callback(this, &UARTSerial::rx_irq), RxIrq);
-            _rx_irq_enabled = true;
-        }
-    }
-    core_util_critical_section_exit();
+    SerialBase::attach(callback(this, &UARTSerial::rx_irq), RxIrq);
+    _rx_irq_enabled = true;
 }
 
-/* This is called called from critical section or interrupt context */
 void UARTSerial::disable_rx_irq()
 {
     SerialBase::attach(NULL, RxIrq);
     _rx_irq_enabled = false;
 }
 
-void UARTSerial::update_tx_irq()
+void UARTSerial::enable_tx_irq()
 {
-    core_util_critical_section_enter();
-    if (_tx_enabled && !_tx_irq_enabled) {
-        UARTSerial::tx_irq();
-        if (!_txbuf.empty()) {
-            SerialBase::attach(callback(this, &UARTSerial::tx_irq), TxIrq);
-            _tx_irq_enabled = true;
-        }
-    }
-    core_util_critical_section_exit();
+    SerialBase::attach(callback(this, &UARTSerial::tx_irq), TxIrq);
+    _tx_irq_enabled = true;
 }
 
-/* This is called called from critical section or interrupt context */
 void UARTSerial::disable_tx_irq()
 {
     SerialBase::attach(NULL, TxIrq);
@@ -376,20 +366,38 @@ void UARTSerial::disable_tx_irq()
 
 int UARTSerial::enable_input(bool enabled)
 {
-    api_lock();
-    SerialBase::enable_input(enabled);
-    update_rx_irq(); // Eventually enable rx-interrupt to handle incoming data
-    api_unlock();
+    core_util_critical_section_enter();
+    if (_rx_enabled != enabled) {
+        if (enabled) {
+            UARTSerial::rx_irq();
+            if (!_rxbuf.full()) {
+                enable_rx_irq();
+            }
+        } else {
+            disable_rx_irq();
+        }
+        _rx_enabled = enabled;
+    }
+    core_util_critical_section_exit();
 
     return 0;
 }
 
 int UARTSerial::enable_output(bool enabled)
 {
-    api_lock();
-    SerialBase::enable_output(enabled);
-    update_tx_irq(); // Eventually enable tx-interrupt to flush buffered data
-    api_unlock();
+    core_util_critical_section_enter();
+    if (_tx_enabled != enabled) {
+        if (enabled) {
+            UARTSerial::tx_irq();
+            if (!_txbuf.empty()) {
+                enable_tx_irq();
+            }
+        } else {
+            disable_tx_irq();
+        }
+        _tx_enabled = enabled;
+    }
+    core_util_critical_section_exit();
 
     return 0;
 }

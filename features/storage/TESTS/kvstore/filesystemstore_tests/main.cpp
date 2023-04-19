@@ -15,9 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#if !defined(MBED_CONF_RTOS_PRESENT)
-#error [NOT_SUPPORTED] Kvstore API test cases require a RTOS to run
-#else
 
 #include "rtos/Thread.h"
 #include "mbed_trace.h"
@@ -30,8 +27,8 @@
 #include "utest.h"
 #include <stdlib.h>
 
-#if !defined(TARGET_K64F) && !defined(TARGET_ARM_FM) && !defined(TARGET_MCU_PSOC6)
-#error [NOT_SUPPORTED] Kvstore API tests run only on K64F devices, Fastmodels, and PSoC 6
+#if !defined(TARGET_K64F) && !defined(TARGET_ARM_FM)
+#error [NOT_SUPPORTED] Kvstore API tests run only on K64F devices and Fastmodels
 #else
 
 #define FSST_TEST_NUM_OF_THREADS 5
@@ -504,7 +501,7 @@ utest::v1::status_t greentea_failure_handler(const Case *const source, const fai
 // Test setup
 utest::v1::status_t test_setup(const size_t number_of_cases)
 {
-    GREENTEA_SETUP(120, "default_auto");
+    GREENTEA_SETUP(60, "default_auto");
     return verbose_test_setup_handler(number_of_cases);
 }
 
@@ -525,4 +522,3 @@ int main()
 }
 
 #endif // !defined(TARGET_K64F) && !defined(TARGET_ARM_FM)
-#endif // !defined(MBED_CONF_RTOS_PRESENT)

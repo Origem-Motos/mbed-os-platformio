@@ -53,8 +53,7 @@ TLSSocketWrapper::TLSSocketWrapper(Socket *transport, const char *hostname, cont
     }
 #endif /* MBEDTLS_PLATFORM_C */
     mbedtls_entropy_init(&_entropy);
-    DRBG_INIT(&_drbg);
-
+    mbedtls_ctr_drbg_init(&_ctr_drbg);
     mbedtls_ssl_init(&_ssl);
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     mbedtls_pk_init(&_pkctx);
@@ -71,9 +70,7 @@ TLSSocketWrapper::~TLSSocketWrapper()
         close();
     }
     mbedtls_entropy_free(&_entropy);
-
-    DRBG_FREE(&_drbg);
-
+    mbedtls_ctr_drbg_free(&_ctr_drbg);
     mbedtls_ssl_free(&_ssl);
 #if defined(MBEDTLS_X509_CRT_PARSE_C)
     mbedtls_pk_free(&_pkctx);
@@ -88,7 +85,7 @@ TLSSocketWrapper::~TLSSocketWrapper()
 
 void TLSSocketWrapper::set_hostname(const char *hostname)
 {
-#if defined(MBEDTLS_X509_CRT_PARSE_C) && !defined(MBEDTLS_X509_REMOVE_HOSTNAME_VERIFICATION)
+#ifdef MBEDTLS_X509_CRT_PARSE_C
     mbedtls_ssl_set_hostname(&_ssl, hostname);
 #endif
 }
@@ -178,7 +175,7 @@ nsapi_error_t TLSSocketWrapper::start_handshake(bool first_call)
         return continue_handshake();
     }
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C) && !defined(MBEDTLS_X509_REMOVE_HOSTNAME_VERIFICATION)
+#ifdef MBEDTLS_X509_CRT_PARSE_C
     tr_info("Starting TLS handshake with %s", _ssl.hostname);
 #else
     tr_info("Starting TLS handshake");
@@ -186,28 +183,14 @@ nsapi_error_t TLSSocketWrapper::start_handshake(bool first_call)
     /*
      * Initialize TLS-related stuf.
      */
-#if defined(MBEDTLS_CTR_DRBG_C)
-    if ((ret = mbedtls_ctr_drbg_seed(&_drbg, mbedtls_entropy_func, &_entropy,
+    if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg, mbedtls_entropy_func, &_entropy,
                                      (const unsigned char *) DRBG_PERS,
                                      sizeof(DRBG_PERS))) != 0) {
         print_mbedtls_error("mbedtls_crt_drbg_init", ret);
         return NSAPI_ERROR_AUTH_FAILURE;
     }
-#elif defined(MBEDTLS_HMAC_DRBG_C)
-    if ((ret = mbedtls_hmac_drbg_seed(&_drbg, mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
-                                      mbedtls_entropy_func, &_entropy,
-                                      (const unsigned char *) DRBG_PERS,
-                                      sizeof(DRBG_PERS))) != 0) {
-        print_mbedtls_error("mbedtls_hmac_drbg_seed", ret);
-        return NSAPI_ERROR_AUTH_FAILURE;
-    }
-#else
-#error "CTR or HMAC must be defined for TLSSocketWrapper!"
-#endif
 
-#if !defined(MBEDTLS_SSL_CONF_RNG)
-    mbedtls_ssl_conf_rng(get_ssl_config(), DRBG_RANDOM, &_drbg);
-#endif
+    mbedtls_ssl_conf_rng(get_ssl_config(), mbedtls_ctr_drbg_random, &_ctr_drbg);
 
 
 #if MBED_CONF_TLS_SOCKET_DEBUG_LEVEL > 0
@@ -224,15 +207,7 @@ nsapi_error_t TLSSocketWrapper::start_handshake(bool first_call)
 
     _transport->set_blocking(false);
     _transport->sigio(mbed::callback(this, &TLSSocketWrapper::event));
-
-    // Defines MBEDTLS_SSL_CONF_RECV/SEND/RECV_TIMEOUT define global functions which should be the same for all
-    // callers of mbedtls_ssl_set_bio_ctx and there should be only one ssl context. If these rules don't apply,
-    // these defines can't be used.
-#if !defined(MBEDTLS_SSL_CONF_RECV) && !defined(MBEDTLS_SSL_CONF_SEND) && !defined(MBEDTLS_SSL_CONF_RECV_TIMEOUT)
-    mbedtls_ssl_set_bio(&_ssl, this, ssl_send, ssl_recv, nullptr);
-#else
-    mbedtls_ssl_set_bio_ctx(&_ssl, this);
-#endif /* !defined(MBEDTLS_SSL_CONF_RECV) && !defined(MBEDTLS_SSL_CONF_SEND) && !defined(MBEDTLS_SSL_CONF_RECV_TIMEOUT) */
+    mbedtls_ssl_set_bio(&_ssl, this, ssl_send, ssl_recv, NULL);
 
     _tls_initialized = true;
 
@@ -282,14 +257,14 @@ nsapi_error_t TLSSocketWrapper::continue_handshake()
         }
     }
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C) && !defined(MBEDTLS_X509_REMOVE_HOSTNAME_VERIFICATION)
+#ifdef MBEDTLS_X509_CRT_PARSE_C
     /* It also means the handshake is done, time to print info */
     tr_info("TLS connection to %s established", _ssl.hostname);
 #else
     tr_info("TLS connection established");
 #endif
 
-#if defined(MBEDTLS_X509_CRT_PARSE_C) && defined(FEA_TRACE_SUPPORT) && !defined(MBEDTLS_X509_REMOVE_INFO)
+#if defined(MBEDTLS_X509_CRT_PARSE_C) && defined(FEA_TRACE_SUPPORT)
     /* Prints the server certificate and verify it. */
     const size_t buf_size = 1024;
     char *buf = new char[buf_size];

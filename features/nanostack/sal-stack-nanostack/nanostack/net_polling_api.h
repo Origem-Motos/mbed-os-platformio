@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, 2021, Pelion and affiliates.
+ * Copyright (c) 2013-2017, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,7 +52,7 @@ extern "C" {
 #endif
 
 /*!
- * \enum net_host_mode
+ * \enum net_host_mode_t
  * \brief Sleepy host states.
  */
 typedef enum net_host_mode {

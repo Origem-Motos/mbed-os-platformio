@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021, Pelion and affiliates.
+ * Copyright (c) 2018-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,8 +25,6 @@
 #include "6LoWPAN/ws/ws_common.h"
 
 #include "ws_management_api.h"
-#include "ns_time_api.h"
-#include "net_ws_test_ext.h"
 
 #ifndef HAVE_WS
 int ws_management_node_init(
@@ -51,90 +49,7 @@ int ws_management_network_name_set(
     return -1;
 }
 
-int ws_management_network_name_get(
-    int8_t interface_id,
-    char *network_name_ptr)
-{
-    (void)interface_id;
-    (void)network_name_ptr;
-    return -1;
-}
-
-int ws_management_network_name_validate(
-    int8_t interface_id,
-    char *network_name_ptr)
-{
-    (void)interface_id;
-    (void)network_name_ptr;
-    return -1;
-}
-
-int ws_management_domain_configuration_set(
-    int8_t interface_id,
-    uint8_t regulatory_domain,
-    uint8_t phy_mode_id,
-    uint8_t channel_plan_id)
-{
-    (void)regulatory_domain;
-    (void)interface_id;
-    (void)phy_mode_id;
-    (void)channel_plan_id;
-    return -1;
-}
-
-int ws_management_domain_configuration_get(
-    int8_t interface_id,
-    uint8_t *regulatory_domain,
-    uint8_t *phy_mode_id,
-    uint8_t *channel_plan_id)
-{
-    (void)regulatory_domain;
-    (void)interface_id;
-    (void)phy_mode_id;
-    (void)channel_plan_id;
-    return -1;
-}
-
-int ws_management_domain_configuration_validate(
-    int8_t interface_id,
-    uint8_t regulatory_domain,
-    uint8_t phy_mode_id,
-    uint8_t channel_plan_id)
-{
-    (void)regulatory_domain;
-    (void)interface_id;
-    (void)phy_mode_id;
-    (void)channel_plan_id;
-    return -1;
-}
-
 int ws_management_regulatory_domain_set(
-    int8_t interface_id,
-    uint8_t regulatory_domain,
-    uint8_t operating_class,
-    uint8_t operating_mode)
-{
-    (void)interface_id;
-    (void)regulatory_domain;
-    (void)operating_class;
-    (void)operating_mode;
-    return -1;
-}
-
-int ws_management_regulatory_domain_get(
-    int8_t interface_id,
-    uint8_t *regulatory_domain,
-    uint8_t *operating_class,
-    uint8_t *operating_mode)
-{
-    (void)interface_id;
-    (void)regulatory_domain;
-    (void)operating_class;
-    (void)operating_mode;
-    return -1;
-}
-
-int ws_management_regulatory_domain_validate(
     int8_t interface_id,
     uint8_t regulatory_domain,
     uint8_t operating_class,
@@ -156,43 +71,7 @@ int ws_management_network_size_set(
     return -1;
 }
 
-int ws_management_network_size_get(
-    int8_t interface_id,
-    uint8_t *network_size)
-{
-    (void)interface_id;
-    (void)network_size;
-    return -1;
-}
-
-int ws_management_network_size_validate(
-    int8_t interface_id,
-    uint8_t network_size)
-{
-    (void)interface_id;
-    (void)network_size;
-    return -1;
-}
-
 int ws_management_channel_mask_set(
-    int8_t interface_id,
-    uint32_t channel_mask[8])
-{
-    (void)interface_id;
-    (void)channel_mask;
-    return -1;
-}
-
-int ws_management_channel_mask_get(
-    int8_t interface_id,
-    uint32_t *channel_mask)
-{
-    (void)interface_id;
-    (void)channel_mask;
-    return -1;
-}
-
-int ws_management_channel_mask_validate(
     int8_t interface_id,
     uint32_t channel_mask[8])
 {
@@ -246,32 +125,6 @@ int ws_management_fhss_unicast_channel_function_configure(
     return -1;
 }
 
-int ws_management_fhss_unicast_channel_function_get(
-    int8_t interface_id,
-    uint8_t *channel_function,
-    uint16_t *fixed_channel,
-    uint8_t *dwell_interval)
-{
-    (void)interface_id;
-    (void)channel_function;
-    (void)fixed_channel;
-    (void)dwell_interval;
-    return -1;
-}
-
-int ws_management_fhss_unicast_channel_function_validate(
-    int8_t interface_id,
-    uint8_t channel_function,
-    uint16_t fixed_channel,
-    uint8_t dwell_interval)
-{
-    (void)interface_id;
-    (void)channel_function;
-    (void)fixed_channel;
-    (void)dwell_interval;
-    return -1;
-}
-
 int ws_management_fhss_broadcast_channel_function_configure(
     int8_t interface_id,
     uint8_t channel_function,
@@ -287,88 +140,7 @@ int ws_management_fhss_broadcast_channel_function_configure(
     return -1;
 }
 
-int ws_management_fhss_broadcast_channel_function_get(
-    int8_t interface_id,
-    uint8_t *channel_function,
-    uint16_t *fixed_channel,
-    uint8_t *dwell_interval,
-    uint32_t *broadcast_interval)
-{
-    (void)interface_id;
-    (void)channel_function;
-    (void)fixed_channel;
-    (void)dwell_interval;
-    (void)broadcast_interval;
-    return -1;
-}
-
-int ws_management_fhss_broadcast_channel_function_validate(
-    int8_t interface_id,
-    uint8_t channel_function,
-    uint16_t fixed_channel,
-    uint8_t dwell_interval,
-    uint32_t broadcast_interval)
-{
-    (void)interface_id;
-    (void)channel_function;
-    (void)fixed_channel;
-    (void)dwell_interval;
-    (void)broadcast_interval;
-    return -1;
-}
-
-int ws_management_timing_parameters_set(
-    int8_t interface_id,
-    uint16_t disc_trickle_imin,
-    uint16_t disc_trickle_imax,
-    uint8_t disc_trickle_k,
-    uint16_t pan_timeout)
-{
-    (void)interface_id;
-    (void)disc_trickle_imin;
-    (void)disc_trickle_imax;
-    (void)disc_trickle_k;
-    (void)pan_timeout;
-    return -1;
-}
-
-int ws_management_timing_parameters_get(
-    int8_t interface_id,
-    uint16_t *disc_trickle_imin,
-    uint16_t *disc_trickle_imax,
-    uint8_t *disc_trickle_k,
-    uint16_t *pan_timeout)
-{
-    (void)interface_id;
-    (void)disc_trickle_imin;
-    (void)disc_trickle_imax;
-    (void)disc_trickle_k;
-    (void)pan_timeout;
-    return -1;
-}
-
-int ws_management_timing_parameters_validate(
-    int8_t interface_id,
-    uint16_t disc_trickle_imin,
-    uint16_t disc_trickle_imax,
-    uint8_t disc_trickle_k,
-    uint16_t pan_timeout)
-{
-    (void)interface_id;
-    (void)disc_trickle_imin;
-    (void)disc_trickle_imax;
-    (void)disc_trickle_k;
-    (void)pan_timeout;
-    return -1;
-}
-
 /* ### test api ### */
-int ws_test_version_set(int8_t interface_id, uint8_t version)
-{
-    (void) interface_id;
-    (void) version;
-    return -1;
-}
 int ws_test_pan_size_set(int8_t interface_id, uint16_t pan_size)
 {
     (void) interface_id;
@@ -426,14 +198,6 @@ int ws_test_next_gtk_set(int8_t interface_id, uint8_t *gtk[4])
     return -1;
 }
 
-int ws_test_6lowpan_fragmentation_mtu_size_set(int8_t interface_id, uint16_t mtu_size)
-{
-    (void) interface_id;
-    (void) mtu_size;
-
-    return -1;
-}
-
 int ws_statistics_start(int8_t interface_id, ws_statistics_t *stats_ptr)
 {
     (void) interface_id;
@@ -446,71 +210,5 @@ int ws_statistics_stop(int8_t interface_id)
     (void) interface_id;
     return -1;
 }
-
-int ws_stack_info_get(int8_t interface_id, ws_stack_info_t *info_ptr)
-{
-    (void) interface_id;
-    (void) info_ptr;
-    return -1;
-}
-
-int ws_neighbor_info_get(
-    int8_t interface_id,
-    ws_neighbour_info_t *neighbor_ptr,
-    uint16_t count)
-{
-    (void) interface_id;
-    (void) neighbor_ptr;
-    (void) count;
-    return -1;
-}
-
-int ws_device_min_sens_set(
-    int8_t interface_id,
-    uint8_t device_min_sens)
-{
-    (void) interface_id;
-    (void) device_min_sens;
-    return -1;
-}
-
-int ws_test_neighbour_temporary_lifetime_set(int8_t interface_id, uint32_t temporary_lifetime)
-{
-    (void) interface_id;
-    (void) temporary_lifetime;
-    return -1;
-}
-
-void ws_test_skip_edfe_data_send(int8_t interface_id, bool skip)
-{
-    (void) interface_id;
-    (void) skip;
-}
-
-
-int8_t  ws_test_drop_edfe_data_frames(int8_t interface_id, uint8_t number_of_dropped_frames)
-{
-    (void) interface_id;
-    (void) number_of_dropped_frames;
-    return -1;
-}
-
-int ws_test_procedure_trigger(int8_t interface_id, ws_test_proc_t procedure, void *parameters)
-{
-    (void) interface_id;
-    (void) procedure;
-    (void) parameters;
-    return -1;
-}
-
-int ws_management_phy_capability_set(
-    int8_t interface_id,
-    ws_management_pcap_info_t *pcap_list)
-{
-    (void)interface_id;
-    (void)pcap_list;
-    return -1;
-}
-
 
 #endif // no HAVE_WS

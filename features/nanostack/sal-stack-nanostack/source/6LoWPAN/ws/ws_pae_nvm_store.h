@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020, Pelion and affiliates.
+ * Copyright (c) 2018-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +24,22 @@
  *
  */
 
+// tag + length
+#define NVM_TLV_FIXED_LEN               4
+
+// file names
+#define NW_INFO_FILE_NAME               "pae_nw_info"
+#define KEYS_FILE_NAME                  "pae_keys"
+#define FRAME_COUNTER_FILE_NAME         "pae_frame_counter"
+
+typedef struct nvm_tlv_entry {
+    ns_list_link_t link;                /**< Link */
+    uint16_t tag;                       /**< Unique tag */
+    uint16_t len;                       /**< Number of the bytes after the length field */
+} nvm_tlv_entry_t;
+
+typedef NS_LIST_HEAD(nvm_tlv_entry_t, link) nvm_tlv_list_t;
+
 #define PAE_NVM_FILE_SUCCESS            0
 #define PAE_NVM_FILE_READ_ERROR        -1
 #define PAE_NVM_FILE_WRITE_ERROR       -2
@@ -33,85 +49,28 @@
 #define PAE_NVM_FILE_PARAMETER_INVALID -6
 #define PAE_NVM_FILE_REMOVE_ERROR      -7
 
-typedef struct nvm_tlv {
-    uint16_t tag;              /**< Unique tag */
-    uint16_t len;              /**< Number of the bytes after the length field */
-} nvm_tlv_t;
-
-typedef struct {
-    nvm_tlv_t nvm_tlv;                  /**< NVM TLV */
-    uint32_t reference_restart_cnt;     /**< Reference re-start counter set when file is created) */
-    uint64_t reference_time;            /**< Reference time used for timers (set when file is created) */
-} key_storage_nvm_tlv_entry_t;
-
-// tag + length
-#define NVM_TLV_FIXED_LEN               sizeof(nvm_tlv_t)
-
-/**
- * ws_pae_nvm_store_generic_tlv_create create NVM generic storage TLV
- *
- * \param tlv_entry TLV entry
- * \param tag tag
- * \param length length of the (whole) entry
- *
- * \return < 0 failure
- * \return >= 0 success
- *
- */
-void ws_pae_nvm_store_generic_tlv_create(nvm_tlv_t *tlv_entry, uint16_t tag, uint16_t length);
-
-/**
- * ws_pae_nvm_store_generic_tlv_allocate_and_create allocate and create NVM generic storage TLV
- *
- * \param tag tag
- * \param length length of the (whole) entry
- *
- * \return TLV entry or NULL
- *
- */
-nvm_tlv_t *ws_pae_nvm_store_generic_tlv_allocate_and_create(uint16_t tag, uint16_t length);
-
-/**
- * ws_pae_nvm_store_generic_tlv_free free NVM generic storage TLV
- *
- * \param tlv_entry TLV entry
- *
- */
-void ws_pae_nvm_store_generic_tlv_free(nvm_tlv_t *tlv_entry);
-
 /**
  * ws_pae_nvm_store_tlv_file_write write a list of TLVs to file
  *
  * \param file file name
- * \param tlv TLV
+ * \param tlv_list TLV list
  *
  * \return < 0 failure
  * \return >= 0 success
  *
  */
-int8_t ws_pae_nvm_store_tlv_file_write(const char *file, nvm_tlv_t *tlv);
+int8_t ws_pae_nvm_store_tlv_file_write(const char *file, nvm_tlv_list_t *tlv_list);
 
 /**
  * ws_pae_nvm_store_tlv_file_read read a list of TLVs from file
  *
  * \param file file name
- * \param tlv TLV
+ * \param tlv_list TLV list
  *
  * \return < 0 failure
  * \return >= 0 success
  *
  */
-int8_t ws_pae_nvm_store_tlv_file_read(const char *file, nvm_tlv_t *tlv);
-
-/**
- * ws_pae_nvm_store_tlv_file_remove delete a file
- *
- * \param file file name
- *
- * \return < 0 failure
- * \return >= 0 success
- *
- */
-int8_t ws_pae_nvm_store_tlv_file_remove(const char *file);
+int8_t ws_pae_nvm_store_tlv_file_read(const char *file, nvm_tlv_list_t *tlv_list);
 
 #endif /* WS_PAE_NVM_STORE_H_ */

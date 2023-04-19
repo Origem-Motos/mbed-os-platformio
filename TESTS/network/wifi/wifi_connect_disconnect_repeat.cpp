@@ -23,14 +23,14 @@
 
 using namespace utest::v1;
 
-#if defined(MBED_CONF_APP_WIFI_SECURE_SSID)
+#if defined(MBED_CONF_APP_WIFI_UNSECURE_SSID)
 
 void wifi_connect_disconnect_repeat(void)
 {
     WiFiInterface *wifi = get_interface();
     nsapi_error_t error;
 
-    error = wifi->set_credentials(MBED_CONF_APP_WIFI_SECURE_SSID, MBED_CONF_APP_WIFI_PASSWORD, get_security());
+    error = wifi->set_credentials(MBED_CONF_APP_WIFI_UNSECURE_SSID, NULL);
     TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, error);
 
     for (int i = 0; i < 10; i++) {
@@ -41,4 +41,4 @@ void wifi_connect_disconnect_repeat(void)
     }
 }
 
-#endif // defined(MBED_CONF_APP_WIFI_SECURE_SSID)
+#endif // defined(MBED_CONF_APP_WIFI_UNSECURE_SSID)

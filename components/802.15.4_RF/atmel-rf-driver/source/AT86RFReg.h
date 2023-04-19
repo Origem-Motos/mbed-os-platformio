@@ -1,16 +1,15 @@
 /*
- * Copyright (c) 2014-2017, 2020, Pelion and affiliates.
+ * Copyright (c) 2014-2015 ARM Limited. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * Licensed under the Apache License, Version 2.0 (the License); you may
+ * not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * distributed under the License is distributed on an AS IS BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -48,8 +47,6 @@ extern "C" {
 #define PART_AT86RF231              0x03
 #define PART_AT86RF212              0x07
 #define PART_AT86RF233              0x0B
-#define PART_AT86RF215              0x34
-#define PART_AT86RF215M             0x36
 #define VERSION_AT86RF212           0x01
 #define VERSION_AT86RF212B          0x03
 

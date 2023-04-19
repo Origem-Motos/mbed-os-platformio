@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, Pelion and affiliates.
+ * Copyright (c) 2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,6 +54,7 @@ typedef struct {
     uint16_t                      handled_len;    /**< Handled length of the data buffer (e.g. acked by other end) */
 } tls_data_t;
 
+#define TLS_FRAGMENT_LEN          1100   //EAP-TLS fragment length
 #define TLS_HEAD_LEN              5      //EAP-TLS flags and EAP-TLS length
 
 extern const uint8_t eap_msg_trace[4][10];

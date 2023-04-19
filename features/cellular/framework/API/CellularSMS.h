@@ -18,8 +18,6 @@
 #ifndef CELLULAR_SMS_H_
 #define CELLULAR_SMS_H_
 
-#if MBED_CONF_CELLULAR_USE_SMS
-
 #include "Callback.h"
 #include "nsapi_types.h"
 
@@ -180,7 +178,5 @@ public:
  */
 
 } // namespace mbed
-
-#endif // MBED_CONF_CELLULAR_USE_SMS
 
 #endif // CELLULAR_SMS_H_

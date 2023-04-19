@@ -21,7 +21,6 @@
 #include "unity/unity.h"
 #include "utest.h"
 #include "udp_tests.h"
-#include "CellularDevice.h"
 
 using namespace utest::v1;
 
@@ -71,10 +70,6 @@ static void _sigio_handler(osThreadId id)
 
 void UDPSOCKET_ECHOTEST_BURST()
 {
-#ifdef MBED_CONF_APP_BAUD_RATE
-    CellularDevice::get_default_instance()->set_baud_rate(MBED_CONF_APP_BAUD_RATE);
-#endif
-
     SocketAddress udp_addr;
     NetworkInterface::get_default_instance()->gethostbyname(ECHO_SERVER_ADDR, &udp_addr);
     udp_addr.set_port(ECHO_SERVER_PORT);
@@ -114,12 +109,12 @@ void UDPSOCKET_ECHOTEST_BURST()
                 }
             } else if (recvd < 0) {
                 pkg_fail += BURST_PKTS - j; // Assume all the following packets of the burst to be lost
-                tr_error("[%02d] network error %d", i, recvd);
+                printf("[%02d] network error %d\n", i, recvd);
                 ThisThread::sleep_for(recv_timeout * 1000);
                 recv_timeout *= 2; // Back off,
                 break;
             } else if (temp_addr != udp_addr) {
-                tr_info("[%02d] packet from wrong address", i);
+                printf("[%02d] packet from wrong address\n", i);
                 --j;
                 continue;
             }
@@ -139,15 +134,15 @@ void UDPSOCKET_ECHOTEST_BURST()
             ok_bursts++;
         } else {
             drop_bad_packets(sock, TIMEOUT);
-            tr_error("[%02d] burst failure, rcv %d", i, bt_total);
+            printf("[%02d] burst failure, rcv %d\n", i, bt_total);
         }
     }
 
     free_tx_buffers();
 
     double loss_ratio = 1 - ((double)(BURST_CNT * BURST_PKTS - pkg_fail) / (double)(BURST_CNT * BURST_PKTS));
-    tr_info("Packets sent: %d, packets received %d, loss ratio %.2lf",
-            BURST_CNT * BURST_PKTS, BURST_CNT * BURST_PKTS - pkg_fail, loss_ratio);
+    printf("Packets sent: %d, packets received %d, loss ratio %.2lf\r\n",
+           BURST_CNT * BURST_PKTS, BURST_CNT * BURST_PKTS - pkg_fail, loss_ratio);
     // Packet loss up to 30% tolerated
     TEST_ASSERT_DOUBLE_WITHIN(TOLERATED_LOSS_RATIO, EXPECTED_LOSS_RATIO, loss_ratio);
     // 70% of the bursts need to be successful
@@ -158,10 +153,6 @@ void UDPSOCKET_ECHOTEST_BURST()
 
 void UDPSOCKET_ECHOTEST_BURST_NONBLOCK()
 {
-#ifdef MBED_CONF_APP_BAUD_RATE
-    CellularDevice::get_default_instance()->set_baud_rate(MBED_CONF_APP_BAUD_RATE);
-#endif
-
     SocketAddress udp_addr;
     NetworkInterface::get_default_instance()->gethostbyname(ECHO_SERVER_ADDR, &udp_addr);
     udp_addr.set_port(ECHO_SERVER_PORT);
@@ -215,7 +206,7 @@ void UDPSOCKET_ECHOTEST_BURST_NONBLOCK()
                     goto PKT_OK;
                 }
             }
-            tr_error("[bt#%02d] corrupted packet...", i);
+            printf("[bt#%02d] corrupted packet...", i);
             pkg_fail++;
             break;
 PKT_OK:
@@ -233,8 +224,8 @@ PKT_OK:
     free_tx_buffers();
 
     double loss_ratio = 1 - ((double)(BURST_CNT * BURST_PKTS - pkg_fail) / (double)(BURST_CNT * BURST_PKTS));
-    tr_info("Packets sent: %d, packets received %d, loss ratio %.2lf",
-            BURST_CNT * BURST_PKTS, BURST_CNT * BURST_PKTS - pkg_fail, loss_ratio);
+    printf("Packets sent: %d, packets received %d, loss ratio %.2lf\r\n",
+           BURST_CNT * BURST_PKTS, BURST_CNT * BURST_PKTS - pkg_fail, loss_ratio);
     // Packet loss up to 30% tolerated
     TEST_ASSERT_DOUBLE_WITHIN(TOLERATED_LOSS_RATIO, EXPECTED_LOSS_RATIO, loss_ratio);
     // 70% of the bursts need to be successful

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2020, Pelion and affiliates.
+ * Copyright (c) 2017-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -629,14 +629,13 @@ static void thread_bbr_network_data_send(thread_bbr_t *this, uint8_t prefix[8], 
 
 static void thread_bbr_routing_enable(thread_bbr_t *this, bool multicast_routing_enabled)
 {
-    // Start multicast proxying
-    // We do not enable multicast forwarding as there is other default router present in network
-    multicast_fwd_set_forwarding(this->interface_id, multicast_routing_enabled);
-
     if (this->routing_enabled) {
         return;
     }
     tr_info("br: enable routing");
+    // Start multicast proxying
+    // We do not enable multicast forwarding as there is other default router present in network
+    multicast_fwd_set_forwarding(this->interface_id, multicast_routing_enabled);
     this->routing_enabled = true;
 }
 

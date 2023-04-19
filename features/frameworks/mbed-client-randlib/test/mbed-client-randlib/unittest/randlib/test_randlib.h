@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2021, Pelion and affiliates.
+ * Copyright (c) 2016 ARM. All rights reserved.
  */
 #ifndef TEST_RANDLIB_H
 #define TEST_RANDLIB_H

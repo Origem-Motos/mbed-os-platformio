@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021, Pelion and affiliates.
+ * Copyright (c) 2018-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,6 @@
 #include "mac_api.h"
 #include "mac_mcps.h"
 #include "Common_Protocols/ipv6_constants.h"
-#include "Common_Protocols/ip.h"
 #include "socket_api.h"
 #include "6LoWPAN/MAC/mac_helper.h"
 #include "6LoWPAN/MAC/mpx_api.h"
@@ -54,7 +53,6 @@ static void ws_eapol_relay_socket_cb(void *cb);
 
 static const eapol_pdu_recv_cb_data_t eapol_pdu_recv_cb_data = {
     .priority = EAPOL_PDU_RECV_LOW_PRIORITY,
-    .filter_requsted = true,
     .addr_check = ws_eapol_relay_eapol_pdu_address_check,
     .receive = ws_eapol_relay_eapol_pdu_receive
 };
@@ -67,14 +65,11 @@ int8_t ws_eapol_relay_start(protocol_interface_info_entry_t *interface_ptr, uint
         return -1;
     }
 
-    eapol_relay_t *eapol_relay = ws_eapol_relay_get(interface_ptr);
-
-    if (eapol_relay) {
-        memcpy(&eapol_relay->remote_addr.address, remote_addr, 16);
+    if (ws_eapol_relay_get(interface_ptr)) {
         return 0;
     }
 
-    eapol_relay = ns_dyn_mem_alloc(sizeof(eapol_relay_t));
+    eapol_relay_t *eapol_relay = ns_dyn_mem_alloc(sizeof(eapol_relay_t));
     if (!eapol_relay) {
         return -1;
     }
@@ -90,8 +85,6 @@ int8_t ws_eapol_relay_start(protocol_interface_info_entry_t *interface_ptr, uint
         ns_dyn_mem_free(eapol_relay);
         return -1;
     }
-    int16_t tc = IP_DSCP_CS6 << IP_TCLASS_DSCP_SHIFT;
-    socket_setsockopt(eapol_relay->socket_id, SOCKET_IPPROTO_IPV6, SOCKET_IPV6_TCLASS, &tc, sizeof(tc));
 
     if (ws_eapol_pdu_cb_register(interface_ptr, &eapol_pdu_recv_cb_data) < 0) {
         ns_dyn_mem_free(eapol_relay);
@@ -189,15 +182,8 @@ static void ws_eapol_relay_socket_cb(void *cb)
         return;
     }
 
-    // EAPOL PDU data length is zero (message contains only supplicant EUI-64 and KMP ID)
-    if (cb_data->d_len == 9) {
-        ws_eapol_pdu_mpx_eui64_purge(eapol_relay->interface_ptr, socket_pdu);
-        ns_dyn_mem_free(socket_pdu);
-        return;
-    }
-
     //First 8 byte is EUID64 and rsr payload
-    if (ws_eapol_pdu_send_to_mpx(eapol_relay->interface_ptr, socket_pdu, socket_pdu + 8, cb_data->d_len - 8, socket_pdu, NULL, 0) < 0) {
+    if (ws_eapol_pdu_send_to_mpx(eapol_relay->interface_ptr, socket_pdu, socket_pdu + 8, cb_data->d_len - 8, socket_pdu) < 0) {
         ns_dyn_mem_free(socket_pdu);
     }
 }

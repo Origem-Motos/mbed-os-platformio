@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, 2019, Pelion and affiliates.
+ * Copyright (c) 2014-2017, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -76,10 +76,5 @@ bool trickle_running(const trickle_t *t, const trickle_params_t *params);
 
 /* Stop the timer (by setting e to infinite) */
 void trickle_stop(trickle_t *t);
-/*
- * Call return max time after n count expiration period 0 return 1 Imin - 1 period
- *
- */
-uint32_t trickle_timer_max(const trickle_params_t *params, uint8_t trickle_timer_expiration);
 
 #endif /* TRICKLE_H_ */

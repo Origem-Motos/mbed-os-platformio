@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, 2019-2021, Pelion and affiliates.
+ * Copyright (c) 2014-2017, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -145,20 +145,6 @@ void protocol_stats_update(nwk_stats_type_t type, uint16_t update_val)
 
             case STATS_ETX_2ND_PARENT:
                 nwk_stats_ptr->etx_2nd_parent = update_val;
-                break;
-            case STATS_AL_TX_QUEUE_SIZE:
-                nwk_stats_ptr->adapt_layer_tx_queue_size = update_val;
-                if (nwk_stats_ptr->adapt_layer_tx_queue_size > nwk_stats_ptr->adapt_layer_tx_queue_peak) {
-                    nwk_stats_ptr->adapt_layer_tx_queue_peak = nwk_stats_ptr->adapt_layer_tx_queue_size;
-                }
-                break;
-            case STATS_AL_TX_CONGESTION_DROP:
-                nwk_stats_ptr->adapt_layer_tx_congestion_drop++;
-                break;
-            case STATS_AL_TX_LATENCY:
-                if (update_val > nwk_stats_ptr->adapt_layer_tx_latency_max) {
-                    nwk_stats_ptr->adapt_layer_tx_latency_max = update_val;
-                }
                 break;
         }
     }

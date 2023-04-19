@@ -81,10 +81,6 @@ typedef enum {
     QSPI_1 = (int)QSPI_R_BASE,
 } QSPIName;
 
-typedef enum {
-    USB_FS = (int)USB_BASE,
-} USBName;
-
 #ifdef __cplusplus
 }
 #endif

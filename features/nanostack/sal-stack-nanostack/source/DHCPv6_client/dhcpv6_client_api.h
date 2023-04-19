@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021, Pelion and affiliates.
+ * Copyright (c) 2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,10 +32,9 @@
  * if only one thread instance is supported this is needed to call only once.
  *
  * /param interface interface id of this instance.
- * /param link_type DHCPV6_DUID_HARDWARE_IEEE_802_NETWORKS_TYPE, DHCPV6_DUID_HARDWARE_EUI64_TYPE or DHCPV6_DUID_HARDWARE_EUI48_TYPE
  *
  */
-void dhcp_client_init(int8_t interface, uint16_t link_type);
+void dhcp_client_init(int8_t interface);
 
 /* Set configurations for DHCP client
  *
@@ -51,9 +50,8 @@ void dhcp_client_configure(int8_t interface, bool renew_uses_solicit, bool one_c
  * /param timeout SOLICIT timeout initial value. 0 means use defaults
  * /param max_rt SOLICIT timeout max value.
  * /param max_rc SOLICIT re-transmission count. 0 means infinite.
- * /param max_delay Max delay of first Solicit
  */
-void dhcp_client_solicit_timeout_set(int8_t interface, uint16_t timeout, uint16_t max_rt, uint8_t max_rc, uint8_t max_delay);
+void dhcp_client_solicit_timeout_set(int8_t interface, uint16_t timeout, uint16_t max_rt, uint8_t max_rc);
 
 /* Delete dhcp client.
  *
@@ -74,54 +72,15 @@ void dhcp_client_delete(int8_t interface);
  * /param interface interface where address is got
  * /param dhcp_addr dhcp server ML16 address where address is registered.
  * /param prefix dhcp server ML16 address where address is registered.
+ * /param mac64 64 bit mac address for identifieng client.
+ * /param link_type Link hardware type.
  * /param error_cb error callback that is called if address cannot be created or becomes invalid.
  * /param register_status true if address registered.
  *
  */
 typedef void (dhcp_client_global_adress_cb)(int8_t interface, uint8_t dhcp_addr[static 16], uint8_t prefix[static 16], bool register_status);
 
-typedef struct dhcp_server_notify_info {
-    uint16_t duid_type;
-    uint16_t duid_length;
-    uint32_t life_time;
-    uint32_t rtt; // Round trip time with 100ms tics.
-    uint8_t *duid;
-} dhcp_server_notify_info_t;
-
-
-typedef struct dhcp_gen_option {
-    uint16_t data_length;
-    uint8_t *data;
-} dhcp_gen_option_t;
-
-typedef struct dhcp_vendor_spesific_option {
-    uint32_t enterprise_number;
-    uint16_t data_length;
-    uint8_t *data;
-} dhcp_vendor_spesific_option_t;
-
-typedef struct dhcp_option_notify_s {
-    uint8_t option_type;
-    union {
-        dhcp_gen_option_t generic;
-        dhcp_vendor_spesific_option_t vendor_spesific;
-    } option;
-} dhcp_option_notify_t;
-
-/* give dhcp Client server Optional options notication
- *
- * /param interface interface id
- * /param option_type Type of option
- * /param option_data data of options.
- * /param option_length length of option.
- * /param server_info info inclu DUID and Life-time for notify options
- *
- */
-typedef void (dhcp_client_options_notify_cb)(int8_t interface, dhcp_option_notify_t *options, dhcp_server_notify_info_t *server_info);
-
-int dhcp_client_get_global_address(int8_t interface, uint8_t dhcp_addr[static 16], uint8_t prefix[static 16], dhcp_client_global_adress_cb *error_cb);
-
-int dhcp_client_option_notification_cb_set(int8_t interface, dhcp_client_options_notify_cb *notify_cb);
+int dhcp_client_get_global_address(int8_t interface, uint8_t dhcp_addr[static 16], uint8_t prefix[static 16], uint8_t mac64[static 8], uint16_t link_type, dhcp_client_global_adress_cb *error_cb);
 
 /* Renew all leased adddresses might be used when short address changes
  *
@@ -140,8 +99,6 @@ void dhcp_client_global_address_delete(int8_t interface, uint8_t *dhcp_addr, uin
 
 
 void dhcp_relay_agent_enable(int8_t interface, uint8_t border_router_address[static 16]);
-
-void dhcp_relay_agent_interface_id_option_enable(int8_t interface, bool enable);
 
 int dhcp_client_server_address_update(int8_t interface, uint8_t *prefix, uint8_t server_address[static 16]);
 

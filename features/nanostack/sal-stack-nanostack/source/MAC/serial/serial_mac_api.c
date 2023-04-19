@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020, Pelion and affiliates.
+ * Copyright (c) 2016-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +23,6 @@
 #include "common_functions.h"
 #include "ns_trace.h"
 #include "MAC/rf_driver_storage.h"
-#include "Core/include/ns_monitor.h"
 
 #define TRACE_GROUP "seMa"
 
@@ -318,16 +317,10 @@ static int8_t serial_mac_net_phy_rx(const uint8_t *data_ptr, uint16_t data_len, 
     (void)link_quality;
     (void) dbm;
 
-    if (!ns_monitor_packet_allocation_allowed()) {
-        // stack can not handle new packets for routing
-        return -1;
-    }
-
     serial_data_ind_t *data_ind = ns_dyn_mem_temporary_alloc(sizeof(serial_data_ind_t));
     if (!data_ind) {
         return -1;
     }
-
     data_ind->msdu = ns_dyn_mem_temporary_alloc(data_len);
     if (!data_ind->msdu) {
         ns_dyn_mem_free(data_ind);

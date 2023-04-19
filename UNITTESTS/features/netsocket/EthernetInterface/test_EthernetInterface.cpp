@@ -93,13 +93,9 @@ public:
         MOCK_METHOD1(attach, void(mbed::Callback<void(nsapi_event_t, intptr_t)> status_cb));
         MOCK_CONST_METHOD0(get_connection_status, nsapi_connection_status_t());
         MOCK_METHOD2(get_mac_address, char *(char *buf, nsapi_size_t buflen));
-        MOCK_METHOD1(get_ip_address, nsapi_error_t(SocketAddress *address));
         MOCK_METHOD2(get_ip_address, char *(char *buf, nsapi_size_t buflen));
-        MOCK_METHOD1(get_netmask, nsapi_error_t(SocketAddress *address));
         MOCK_METHOD2(get_netmask, char *(char *buf, nsapi_size_t buflen));
-        MOCK_METHOD1(get_gateway, nsapi_error_t(SocketAddress *address));
         MOCK_METHOD2(get_gateway, char *(char *buf, nsapi_size_t buflen));
-        MOCK_METHOD1(get_ipv6_link_local_address, nsapi_error_t(SocketAddress *address));
     };
 };
 
@@ -206,18 +202,17 @@ TEST_F(TestEthernetInterface, disconnect)
 
 TEST_F(TestEthernetInterface, set_network)
 {
-    SocketAddress ipAddress("127.0.0.1");
-    SocketAddress netmask("255.255.0.0");
-    SocketAddress gateway("127.0.0.2");
+    char ipAddress[NSAPI_IPv4_SIZE] = "127.0.0.1";
+    char netmask[NSAPI_IPv4_SIZE] = "255.255.0.0";
+    char gateway[NSAPI_IPv4_SIZE] = "127.0.0.2";
 
-    SocketAddress ipAddressArg;
-    SocketAddress netmaskArg;
-    SocketAddress gatewayArg;
+    const char *ipAddressArg;
+    const char *netmaskArg;
+    const char *gatewayArg;
 
-    SocketAddress tmp;
-    EXPECT_EQ(NSAPI_ERROR_NO_CONNECTION, iface->get_ip_address(&tmp));
-    EXPECT_EQ(NSAPI_ERROR_NO_CONNECTION, iface->get_netmask(&tmp));
-    EXPECT_EQ(NSAPI_ERROR_NO_CONNECTION, iface->get_gateway(&tmp));
+    EXPECT_EQ(0, iface->get_ip_address());
+    EXPECT_EQ(0, iface->get_netmask());
+    EXPECT_EQ(0, iface->get_gateway());
 
     // Set the network data
     EXPECT_EQ(NSAPI_ERROR_OK, iface->set_network(ipAddress, netmask, gateway));
@@ -238,25 +233,25 @@ TEST_F(TestEthernetInterface, set_network)
                     Return(NSAPI_ERROR_OK)));
     EXPECT_EQ(NSAPI_ERROR_OK, iface->connect());
     // Check the contents of the stored pointer arguments.
-    EXPECT_EQ(ipAddress, ipAddressArg);
-    EXPECT_EQ(netmask, netmaskArg);
-    EXPECT_EQ(gateway, gatewayArg);
+    EXPECT_TRUE(0 == strcmp(ipAddress, ipAddressArg));
+    EXPECT_TRUE(0 == strcmp(netmask, netmaskArg));
+    EXPECT_TRUE(0 == strcmp(gateway, gatewayArg));
 
     // Testing the getters makes sense now.
-    EXPECT_CALL(*netStackIface, get_ip_address(_))
+    EXPECT_CALL(*netStackIface, get_ip_address(_, _))
     .Times(1)
-    .WillOnce(DoAll(SetArgPointee<0>(ipAddress), Return(NSAPI_ERROR_OK)));
-    EXPECT_EQ(NSAPI_ERROR_OK, iface->get_ip_address(&ipAddressArg));
+    .WillOnce(DoAll(SetArgPointee<0>(*ipAddress), Return(ipAddress)));
+    EXPECT_EQ(std::string(ipAddress), std::string(iface->get_ip_address()));
 
-    EXPECT_CALL(*netStackIface, get_netmask(_))
+    EXPECT_CALL(*netStackIface, get_netmask(_, _))
     .Times(1)
-    .WillOnce(DoAll(SetArgPointee<0>(netmask), Return(NSAPI_ERROR_OK)));
-    EXPECT_EQ(NSAPI_ERROR_OK, iface->get_netmask(&netmaskArg));
+    .WillOnce(DoAll(SetArgPointee<0>(*netmask), Return(netmask)));
+    EXPECT_EQ(std::string(netmask), std::string(iface->get_netmask()));
 
-    EXPECT_CALL(*netStackIface, get_gateway(_))
+    EXPECT_CALL(*netStackIface, get_gateway(_, _))
     .Times(1)
-    .WillOnce(DoAll(SetArgPointee<0>(gateway), Return(NSAPI_ERROR_OK)));
-    EXPECT_EQ(NSAPI_ERROR_OK, iface->get_gateway(&gatewayArg));
+    .WillOnce(DoAll(SetArgPointee<0>(*gateway), Return(gateway)));
+    EXPECT_EQ(std::string(gateway), std::string(iface->get_gateway()));
 }
 
 TEST_F(TestEthernetInterface, get_connection_status)

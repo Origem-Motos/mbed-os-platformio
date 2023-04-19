@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-#if defined(MBED_CONF_RTOS_PRESENT)
 #include "mbed.h"
 #include "TCPSocket.h"
 #include "greentea-client/test_env.h"
@@ -53,11 +52,11 @@ void TCPSOCKET_ECHOTEST_BURST()
     for (int i = 0; i < BURST_CNT; i++) {
         sent = sock.send(tcp_global::tx_buffer, BURST_SIZE);
         if (sent < 0) {
-            tr_error("[%02d] network error %d", i, sent);
+            printf("[%02d] network error %d\n", i, sent);
             TEST_FAIL();
             break;
         } else if (sent != BURST_SIZE) {
-            tr_error("[%02d] sock.send return size %d does not match the expectation %d", i, sent, BURST_SIZE);
+            printf("[%02d] sock.send return size %d does not match the expectation %d\n", i, sent, BURST_SIZE);
             TEST_FAIL();
             break;
         }
@@ -66,7 +65,7 @@ void TCPSOCKET_ECHOTEST_BURST()
         while (bytes2recv) {
             recvd = sock.recv(&(tcp_global::rx_buffer[sent - bytes2recv]), bytes2recv);
             if (recvd < 0) {
-                tr_error("[Round#%02d] network error %d", i, recvd);
+                printf("[Round#%02d] network error %d\n", i, recvd);
                 TEST_FAIL();
                 TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, sock.close());
                 return;
@@ -104,7 +103,7 @@ void TCPSOCKET_ECHOTEST_BURST_NONBLOCK()
                 }
                 continue;
             } else if (sent < 0) {
-                tr_error("[%02d] network error %d", i, sent);
+                printf("[%02d] network error %d\n", i, sent);
                 TEST_FAIL();
                 goto END;
             }
@@ -120,19 +119,19 @@ void TCPSOCKET_ECHOTEST_BURST_NONBLOCK()
             recvd = sock.recv(&(tcp_global::rx_buffer[BURST_SIZE - bt_left]), BURST_SIZE);
             if (recvd == NSAPI_ERROR_WOULD_BLOCK) {
                 if (osSignalWait(SIGNAL_SIGIO, SIGIO_TIMEOUT).status == osEventTimeout) {
-                    tr_error("[bt#%02d] packet timeout...", i);
+                    printf("[bt#%02d] packet timeout...", i);
                     break;
                 }
                 continue;
             } else if (recvd < 0) {
-                tr_error("[%02d] network error %d", i, recvd);
+                printf("[%02d] network error %d\n", i, recvd);
                 break;
             }
             bt_left -= recvd;
         }
 
         if (bt_left != 0) {
-            tr_error("network error %d, missing %d bytes from a burst", recvd, bt_left);
+            printf("network error %d, missing %d bytes from a burst\n", recvd, bt_left);
             TEST_FAIL();
             goto END;
         }
@@ -142,4 +141,3 @@ void TCPSOCKET_ECHOTEST_BURST_NONBLOCK()
 END:
     TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, sock.close());
 }
-#endif // defined(MBED_CONF_RTOS_PRESENT)

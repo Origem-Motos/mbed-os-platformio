@@ -14,7 +14,6 @@
 * limitations under the License.
 */
 
-
 #include "nvstore.h"
 #ifdef MBED_CONF_RTOS_PRESENT
 #include "Thread.h"
@@ -397,7 +396,6 @@ clean:
     delete[] nvstore_testing_buf_get;
 }
 
-#ifdef MBED_CONF_RTOS_PRESENT
 static void thread_test_check_key(uint16_t key)
 {
     uint8_t get_buff[thr_test_max_data_size];
@@ -424,6 +422,7 @@ static void thread_test_check_key(uint16_t key)
 
 }
 
+#ifdef MBED_CONF_RTOS_PRESENT
 static void thread_test_worker()
 {
     int ret;
@@ -445,9 +444,11 @@ static void thread_test_worker()
         wait_ms(1);
     }
 }
+#endif
 
 static void nvstore_multi_thread_test()
 {
+#ifdef MBED_CONF_RTOS_PRESENT
     int i, result;
     uint16_t size;
     uint16_t key;
@@ -561,6 +562,8 @@ clean:
     }
 
     nvstore.reset();
+
+#endif
 }
 
 
@@ -575,6 +578,7 @@ static void race_test_worker(void *buf)
 
 static void nvstore_race_test()
 {
+#ifdef MBED_CONF_RTOS_PRESENT
     int i;
     uint16_t initial_buf_size;
     int ret;
@@ -664,8 +668,8 @@ clean:
         delete[] buffs[i];
     }
     delete[] get_buff;
-}
 #endif
+}
 
 
 
@@ -677,10 +681,8 @@ utest::v1::status_t greentea_failure_handler(const Case *const source, const fai
 
 Case cases[] = {
     Case("NVStore: Basic functionality",  nvstore_basic_functionality_test, greentea_failure_handler),
-#if defined(MBED_CONF_RTOS_PRESENT)
     Case("NVStore: Race test",            nvstore_race_test,                greentea_failure_handler),
     Case("NVStore: Multiple thread test", nvstore_multi_thread_test,        greentea_failure_handler),
-#endif
 };
 
 utest::v1::status_t greentea_test_setup(const size_t number_of_cases)

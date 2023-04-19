@@ -17,11 +17,8 @@
 #ifndef MBED_DATAFLASH_BLOCK_DEVICE_H
 #define MBED_DATAFLASH_BLOCK_DEVICE_H
 
-#include "platform/PlatformMutex.h"
-#include "PinNames.h"
-#include "features/storage/blockdevice/BlockDevice.h"
-#include "drivers/SPI.h"
-#include "drivers/DigitalOut.h"
+#include <mbed.h>
+#include "BlockDevice.h"
 
 
 /** BlockDevice for DataFlash flash devices

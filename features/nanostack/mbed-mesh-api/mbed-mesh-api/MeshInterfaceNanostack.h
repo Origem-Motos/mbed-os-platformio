@@ -25,20 +25,20 @@
 
 class Nanostack::Interface : public OnboardNetworkStack::Interface, private mbed::NonCopyable<Nanostack::Interface> {
 public:
-    virtual nsapi_error_t get_ip_address(SocketAddress *address);
-    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
     virtual char *get_ip_address(char *buf, nsapi_size_t buflen);
     virtual char *get_mac_address(char *buf, nsapi_size_t buflen);
-    virtual nsapi_error_t set_mac_address(uint8_t *buf, nsapi_size_t buflen);
-    virtual nsapi_error_t get_netmask(SocketAddress *address);
-    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
     virtual char *get_netmask(char *buf, nsapi_size_t buflen);
-    virtual nsapi_error_t get_gateway(SocketAddress *address);
-    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
     virtual char *get_gateway(char *buf, nsapi_size_t buflen);
     virtual void attach(mbed::Callback<void(nsapi_event_t, intptr_t)> status_cb);
     virtual nsapi_connection_status_t get_connection_status() const;
-    virtual void get_mac_address(uint8_t *buf) const;
+
+    void get_mac_address(uint8_t *buf) const
+    {
+        NanostackMACPhy *phy = interface_phy.nanostack_mac_phy();
+        if (phy) {
+            phy->get_mac_address(buf);
+        }
+    }
 
     /**
      * \brief Callback from C-layer
@@ -76,8 +76,6 @@ protected:
 };
 
 class Nanostack::MeshInterface : public Nanostack::Interface {
-public:
-    char *get_interface_name(char *buf);
 protected:
     MeshInterface(NanostackRfPhy &phy) : Interface(phy) { }
     NanostackRfPhy &get_phy() const
@@ -101,19 +99,15 @@ public:
      */
     virtual nsapi_error_t disconnect();
 
-    /** @copydoc NetworkInterface::get_ip_address */
-    virtual nsapi_error_t get_ip_address(SocketAddress *address);
-
-    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
+    /** Get the internally stored IP address
+    /return     IP address of the interface or null if not yet connected
+    */
     virtual const char *get_ip_address();
 
     /** Get the internally stored MAC address
     /return     MAC address of the interface
     */
     virtual const char *get_mac_address();
-
-    /** @copydoc NetworkInterface::set_mac_address */
-    virtual nsapi_error_t set_mac_address(uint8_t *mac_addr, nsapi_size_t addr_len);
 
     /** Register callback for status reporting
      *
@@ -167,11 +161,10 @@ protected:
 
     Nanostack::Interface *_interface;
 
-    SocketAddress ip_addr;
+    char ip_addr_str[40];
     char mac_addr_str[24];
     mbed::Callback<void(nsapi_event_t, intptr_t)> _connection_status_cb;
     bool _blocking;
-    bool _configured = false;
 };
 
 class MeshInterfaceNanostack : public InterfaceNanostack, public MeshInterface, private mbed::NonCopyable<MeshInterfaceNanostack> {

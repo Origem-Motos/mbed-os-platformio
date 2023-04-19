@@ -1,5 +1,5 @@
 /* mbed Microcontroller Library
- * Copyright (c) 2019 ARM Limited
+ * Copyright (c) 2016 ARM Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,18 +19,12 @@
 
 #include <stdint.h>
 
-#ifndef INITIAL_SP
-
 #if defined(TARGET_CC3220SF)
-#define INITIAL_SP  (0x20040000UL)
 
-#elif defined(TARGET_MSP432P401R)
-#define INITIAL_SP  (0x20010000UL)
-
-#else
-#error "INITIAL_SP is not defined for this target in the mbed_rtx.h file"
+#ifndef INITIAL_SP
+#define INITIAL_SP              (0x20040000UL)
 #endif
 
-#endif // INITIAL_SP
+#endif /* defined(TARGET_CC3220SF) */
 
-#endif // MBED_MBED_RTX_H
+#endif  /* MBED_MBED_RTX_H */

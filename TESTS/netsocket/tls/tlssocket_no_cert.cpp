@@ -31,11 +31,8 @@ void TLSSOCKET_NO_CERT()
     SKIP_IF_TCP_UNSUPPORTED();
     TLSSocket sock;
     TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, sock.open(NetworkInterface::get_default_instance()));
-    SocketAddress a;
-    TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, NetworkInterface::get_default_instance()->gethostbyname(ECHO_SERVER_ADDR, &a));
-    a.set_port(ECHO_SERVER_PORT_TLS);
     TEST_ASSERT_EQUAL(NSAPI_ERROR_AUTH_FAILURE,
-                      sock.connect(a));
+                      sock.connect(ECHO_SERVER_ADDR, ECHO_SERVER_PORT_TLS));
     TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, sock.close());
 }
 

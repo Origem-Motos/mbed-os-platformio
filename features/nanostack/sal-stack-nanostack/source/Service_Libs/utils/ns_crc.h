@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020, Pelion and affiliates.
+ * Copyright (c) 2015-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +31,7 @@ uint16_t crc16_ccitt(uint8_t *message, int nBytes);
 
 /**
  *  @param data         data which crc will be calculate
- *  @param data_length  Length of data pointer
+ *  @param data_length  Lenght of data pointer
  *  @param polynomial   Polynomial which will be used to calculate CRC, POLYNOMIAL_CRC15_CCIT, POLYNOMIAL_CRC15_ANSI
  *  @return Calculated 16bit CRC value
  */

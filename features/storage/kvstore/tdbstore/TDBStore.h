@@ -19,9 +19,9 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include "features/storage/kvstore/include/KVStore.h"
-#include "features/storage/blockdevice/BlockDevice.h"
-#include "features/storage/blockdevice/BufferedBlockDevice.h"
+#include "KVStore.h"
+#include "BlockDevice.h"
+#include "BufferedBlockDevice.h"
 #include "PlatformMutex.h"
 
 namespace mbed {
@@ -61,7 +61,8 @@ public:
      *        the available data and clean corrupted and erroneous records.
      *
      * @returns MBED_SUCCESS                        Success.
-     * @returns Negative error code on failure.
+     *          MBED_ERROR_READ_FAILED              Unable to read from media.
+     *          MBED_ERROR_WRITE_FAILED             Unable to write to media.
      */
     virtual int init();
 
@@ -308,6 +309,7 @@ private:
     uint32_t _prog_size;
     uint8_t *_work_buf;
     char *_key_buf;
+    bool _variant_bd_erase_unit_size;
     void *_inc_set_handle;
     void *_iterator_table[_max_open_iterators];
 
@@ -364,8 +366,8 @@ private:
      *
      * @param[in]  area                   Area.
      * @param[in]  offset                 Offset of record in area.
-     * @param[out] key                    Key - must not include '*' '/' '?' ':' ';' '\' '"' '|' ' ' '<' '>' '\'.
-     * @param[out] data_buf               Data buffer.
+     * @param[in]  key                    Key - must not include '*' '/' '?' ':' ';' '\' '"' '|' ' ' '<' '>' '\'.
+     * @param[in]  data_buf               Data buffer.
      * @param[in]  data_buf_size          Data buffer size.
      * @param[out] actual_data_size       Actual data size.
      * @param[in]  data_offset            Offset in data.

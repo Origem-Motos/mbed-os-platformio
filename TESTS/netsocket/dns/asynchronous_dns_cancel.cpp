@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#if defined(MBED_CONF_RTOS_PRESENT)
 
 #include "mbed.h"
 #include "greentea-client/test_env.h"
@@ -30,7 +29,6 @@ void ASYNCHRONOUS_DNS_CANCEL()
     dns_application_data *data = new dns_application_data[MBED_CONF_APP_DNS_TEST_HOSTS_NUM];
 
     int count = 0;
-    nsapi_dns_reset();
 
     for (unsigned int i = 0; i < MBED_CONF_APP_DNS_TEST_HOSTS_NUM; i++) {
         data[i].value_set = false;
@@ -44,7 +42,7 @@ void ASYNCHRONOUS_DNS_CANCEL()
             count++;
         } else {
             // No memory to initiate DNS query, callback will not be called
-            tr_error("Error: No resources to initiate DNS query for %s", dns_test_hosts[i]);
+            printf("Error: No resources to initiate DNS query for %s\n", dns_test_hosts[i]);
             data[i].result = data[i].req_result;
             data[i].value_set = true;
         }
@@ -65,21 +63,21 @@ void ASYNCHRONOUS_DNS_CANCEL()
 
     for (unsigned int i = 0; i < MBED_CONF_APP_DNS_TEST_HOSTS_NUM; i++) {
         if (!data[i].value_set) {
-            tr_info("DNS: query \"%s\" => cancel", dns_test_hosts[i]);
+            printf("DNS: query \"%s\" => cancel\n", dns_test_hosts[i]);
             continue;
         }
         TEST_ASSERT(data[i].result == NSAPI_ERROR_OK || data[i].result == NSAPI_ERROR_NO_MEMORY || data[i].result == NSAPI_ERROR_BUSY || data[i].result == NSAPI_ERROR_DNS_FAILURE || data[i].result == NSAPI_ERROR_TIMEOUT);
         if (data[i].result == NSAPI_ERROR_OK) {
-            tr_info("DNS: query \"%s\" => \"%s\"",
-                    dns_test_hosts[i], data[i].addr.get_ip_address());
+            printf("DNS: query \"%s\" => \"%s\"\n",
+                   dns_test_hosts[i], data[i].addr.get_ip_address());
         } else if (data[i].result == NSAPI_ERROR_DNS_FAILURE) {
-            tr_error("DNS: query \"%s\" => DNS failure", dns_test_hosts[i]);
+            printf("DNS: query \"%s\" => DNS failure\n", dns_test_hosts[i]);
         } else if (data[i].result == NSAPI_ERROR_TIMEOUT) {
-            tr_error("DNS: query \"%s\" => timeout", dns_test_hosts[i]);
+            printf("DNS: query \"%s\" => timeout\n", dns_test_hosts[i]);
         } else if (data[i].result == NSAPI_ERROR_NO_MEMORY) {
-            tr_error("DNS: query \"%s\" => no memory", dns_test_hosts[i]);
+            printf("DNS: query \"%s\" => no memory\n", dns_test_hosts[i]);
         } else if (data[i].result == NSAPI_ERROR_BUSY) {
-            tr_error("DNS: query \"%s\" => busy", dns_test_hosts[i]);
+            printf("DNS: query \"%s\" => busy\n", dns_test_hosts[i]);
         }
     }
 
@@ -87,4 +85,3 @@ void ASYNCHRONOUS_DNS_CANCEL()
 
     ThisThread::sleep_for(5000);
 }
-#endif // defined(MBED_CONF_RTOS_PRESENT)

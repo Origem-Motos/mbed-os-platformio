@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021, Pelion and affiliates.
+ * Copyright (c) 2018-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,15 +49,13 @@ typedef struct wh_ie_sub_list_s {
  * @brief wp_nested_ie_sub_list_t ws asynch Nested Payload sub IE element request list
  */
 typedef struct wp_nested_ie_sub_list_s {
-    bool us_ie: 1;                  /**< Unicast Schedule information */
-    bool bs_ie: 1;                  /**< Broadcast Schedule information */
-    bool vp_ie: 1;                  /**< Vendor Payload information */
-    bool pan_ie: 1;                 /**< PAN Information */
-    bool net_name_ie: 1;            /**< Network Name information */
-    bool pan_version_ie: 1;         /**< Pan configuration version */
-    bool gtkhash_ie: 1;             /**< GTK Hash information */
-    bool lfn_gtk_version_ie: 1;     /**<  LFN Version & GTK Hash */
-    bool phy_cap_ie: 1;             /** < Phy Cap information for MDR */
+    bool us_ie: 1;          /**< Unicast Schedule information */
+    bool bs_ie: 1;          /**< Broadcast Schedule information */
+    bool vp_ie: 1;          /**< Vendor Payload information */
+    bool pan_ie: 1;         /**< PAN Information */
+    bool net_name_ie: 1;    /**< Network Name information */
+    bool pan_version_ie: 1; /**< Pan configuration version */
+    bool gtkhash_ie: 1;     /**< GTK Hash information */
 } wp_nested_ie_sub_list_t;
 
 /**
@@ -80,18 +78,11 @@ typedef struct llc_neighbour_req {
     struct ws_neighbor_class_entry *ws_neighbor;                /**< Wi-sun Neighbor information entry. */
 } llc_neighbour_req_t;
 
-typedef struct eapol_temporary_info_s {
-    uint8_t eapol_rx_relay_filter; /*!< seconds for dropping duplicate id */
-    uint8_t last_rx_mac_sequency; /*!< Only compared when Timer is active */
-    uint16_t eapol_timeout; /*!< EAPOL relay Temporary entry lifetime */
-} eapol_temporary_info_t;
-
 /**
  * Neighbor temporary structure for storage FHSS data before create a real Neighbour info
  */
 typedef struct ws_neighbor_temp_class_s {
     struct ws_neighbor_class_entry neigh_info_list;  /*!< Allocated hopping info array*/
-    eapol_temporary_info_t eapol_temp_info;
     uint8_t mac64[8];
     uint8_t mpduLinkQuality;
     int8_t signal_dbm;
@@ -126,7 +117,7 @@ typedef void ws_asynch_confirm(struct protocol_interface_info_entry *interface, 
  * @return true when neighbor info is available
  * @return false when no neighbor info
  */
-typedef bool ws_neighbor_info_request(struct protocol_interface_info_entry *interface, const uint8_t *mac_64, struct llc_neighbour_req *neighbor_buffer, bool request_new);
+typedef bool ws_neighbor_info_request(struct protocol_interface_info_entry *interface, const uint8_t *mac_64, llc_neighbour_req_t *neighbor_buffer, bool request_new);
 
 /**
  * @brief ws_llc_create ws LLC module create
@@ -226,17 +217,7 @@ void ws_llc_set_pan_information_pointer(struct protocol_interface_info_entry *in
  */
 void ws_llc_hopping_schedule_config(struct protocol_interface_info_entry *interface, struct ws_hopping_schedule_s *hopping_schedule);
 
-void ws_llc_timer_seconds(struct protocol_interface_info_entry *interface, uint16_t seconds_update);
-
-void ws_llc_fast_timer(struct protocol_interface_info_entry *interface, uint16_t ticks);
-
-bool ws_llc_eapol_relay_forward_filter(struct protocol_interface_info_entry *interface, const uint8_t *joiner_eui64, uint8_t mac_sequency, uint32_t rx_timestamp);
-
 ws_neighbor_temp_class_t *ws_llc_get_multicast_temp_entry(struct protocol_interface_info_entry *interface, const uint8_t *mac64);
-
-ws_neighbor_temp_class_t *ws_llc_get_eapol_temp_entry(struct protocol_interface_info_entry *interface, const uint8_t *mac64);
-
-
 
 void ws_llc_free_multicast_temp_entry(struct protocol_interface_info_entry *interface, ws_neighbor_temp_class_t *neighbor);
 

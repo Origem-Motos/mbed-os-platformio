@@ -1,5 +1,4 @@
 /* Copyright (c) 2009-2019 Arm Limited
- * Copyright (c) 2019-2020 Packetcraft, Inc.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -315,7 +314,6 @@ typedef struct
   uint8_t         token;                          /* AES transaction token */
   uint8_t         attempts;                       /* Failed pairing attempts */
   uint8_t         lastSentKey;                    /* Command code of last sent key */
-  bool_t          keyReady;                       /* Encryption key is ready */
   smpScCcb_t      *pScCcb;                        /* LE Secure Connection control blocks */
 } smpCcb_t;
 

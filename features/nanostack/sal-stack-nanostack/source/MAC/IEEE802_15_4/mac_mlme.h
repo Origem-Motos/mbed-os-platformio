@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, Pelion and affiliates.
+ * Copyright (c) 2014-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -106,7 +106,7 @@ void mac_mlme_event_cb(void *mac_ptr);
 
 void mac_mlme_set_active_state(struct protocol_interface_rf_mac_setup *entry, bool new_state);
 
-struct protocol_interface_rf_mac_setup *mac_mlme_data_base_allocate(uint8_t *mac64, struct arm_device_driver_list *dev_driver, struct mac_description_storage_size_s *storage_sizes, uint16_t mtu_size);
+struct protocol_interface_rf_mac_setup *mac_mlme_data_base_allocate(uint8_t *mac64, struct arm_device_driver_list *dev_driver, struct mac_description_storage_size_s *storage_sizes);
 void mac_mlme_data_base_deallocate(struct protocol_interface_rf_mac_setup *rf_mac);
 
 uint8_t mac_mlme_set_new_sqn(struct protocol_interface_rf_mac_setup *rf_setup);

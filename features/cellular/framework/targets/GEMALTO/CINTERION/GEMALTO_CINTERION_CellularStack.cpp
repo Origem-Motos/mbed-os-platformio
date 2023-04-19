@@ -99,7 +99,7 @@ void GEMALTO_CINTERION_CellularStack::sisr_urc_handler(int sock_id, int urc_code
     if (sock) {
         if (urc_code == 1) { // data available
             if (sock->_cb) {
-                sock->pending_bytes = 1;
+                sock->rx_avail = true;
                 sock->_cb(sock->_data);
             }
         }
@@ -387,9 +387,9 @@ nsapi_size_or_error_t GEMALTO_CINTERION_CellularStack::socket_recvfrom_impl(Cell
 
     // we must use this flag, otherwise ^SISR URC can come while we are reading response and there is
     // no way to detect if that is really an URC or response
-    if (!socket->pending_bytes) {
+    if (!socket->rx_avail) {
         _at.process_oob(); // check for ^SISR URC
-        if (!socket->pending_bytes) {
+        if (!socket->rx_avail) {
             tr_debug("Socekt %d recv would block", socket->id);
             return NSAPI_ERROR_WOULD_BLOCK;
         }
@@ -430,12 +430,12 @@ sisr_retry:
         tr_error("Socket %d recvfrom failed!", socket->id);
         return NSAPI_ERROR_DEVICE_ERROR;
     }
-    socket->pending_bytes = 0;
+    socket->rx_avail = false;
     if (len >= (nsapi_size_or_error_t)size) {
         len = (nsapi_size_or_error_t)size;
         int remain_len = _at.read_int();
         if (remain_len > 0) {
-            socket->pending_bytes = 1;
+            socket->rx_avail = true;
         }
     }
 

@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-#if MBED_CONF_CELLULAR_USE_SMS
-
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -1250,4 +1248,3 @@ uint16_t AT_CellularSMS::unpack_7_bit_gsm_to_str(const char *str, int len, char 
 
     return decodedCount;
 }
-#endif //MBED_CONF_CELLULAR_USE_SMS

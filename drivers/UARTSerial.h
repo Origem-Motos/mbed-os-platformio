@@ -58,13 +58,6 @@ public:
      *  @param baud The baud rate of the serial port (optional, defaults to MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE)
      */
     UARTSerial(PinName tx, PinName rx, int baud = MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE);
-
-    /** Create a UARTSerial port, connected to the specified transmit and receive pins, with a particular baud rate.
-     *  @param static_pinmap reference to structure which holds static pinmap
-     *  @param baud The baud rate of the serial port (optional, defaults to MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE)
-     */
-    UARTSerial(const serial_pinmap_t &static_pinmap, int baud = MBED_CONF_PLATFORM_DEFAULT_SERIAL_BAUD_RATE);
-
     virtual ~UARTSerial();
 
     /** Equivalent to POSIX poll(). Derived from FileHandle.
@@ -278,9 +271,9 @@ private:
     /** Unbuffered write - invoked when write called from critical section */
     ssize_t write_unbuffered(const char *buf_ptr, size_t length);
 
-    void update_rx_irq();
+    void enable_rx_irq();
     void disable_rx_irq();
-    void update_tx_irq();
+    void enable_tx_irq();
     void disable_tx_irq();
 
     /** Software serial buffers
@@ -296,6 +289,8 @@ private:
     bool _blocking;
     bool _tx_irq_enabled;
     bool _rx_irq_enabled;
+    bool _tx_enabled;
+    bool _rx_enabled;
     InterruptIn *_dcd_irq;
 
     /** Device Hanged up

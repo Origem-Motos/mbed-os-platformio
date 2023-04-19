@@ -49,7 +49,6 @@ QSPI::QSPI(PinName io0, PinName io1, PinName io2, PinName io3, PinName sclk, Pin
     _qspi_io3 = io3;
     _qspi_clk = sclk;
     _qspi_cs = ssel;
-    _static_pinmap = NULL;
     _inst_width = QSPI_CFG_BUS_SINGLE;
     _address_width = QSPI_CFG_BUS_SINGLE;
     _address_size = QSPI_CFG_ADDR_SIZE_24;
@@ -60,36 +59,9 @@ QSPI::QSPI(PinName io0, PinName io1, PinName io2, PinName io3, PinName sclk, Pin
     _mode = mode;
     _hz = ONE_MHZ;
     _initialized = false;
-    _init_func = &QSPI::_initialize;
 
     //Go ahead init the device here with the default config
-    bool success = (this->*_init_func)();
-    MBED_ASSERT(success);
-}
-
-QSPI::QSPI(const qspi_pinmap_t &pinmap, int mode) : _qspi()
-{
-    _qspi_io0 = pinmap.data0_pin;
-    _qspi_io1 = pinmap.data1_pin;
-    _qspi_io2 = pinmap.data2_pin;
-    _qspi_io3 = pinmap.data3_pin;
-    _qspi_clk = pinmap.sclk_pin;
-    _qspi_cs = pinmap.ssel_pin;
-    _static_pinmap = &pinmap;
-    _inst_width = QSPI_CFG_BUS_SINGLE;
-    _address_width = QSPI_CFG_BUS_SINGLE;
-    _address_size = QSPI_CFG_ADDR_SIZE_24;
-    _alt_width = QSPI_CFG_BUS_SINGLE;
-    _alt_size = QSPI_CFG_ALT_SIZE_8;
-    _data_width = QSPI_CFG_BUS_SINGLE;
-    _num_dummy_cycles = 0;
-    _mode = mode;
-    _hz = ONE_MHZ;
-    _initialized = false;
-    _init_func = &QSPI::_initialize_direct;
-
-    //Go ahead init the device here with the default config
-    bool success = (this->*_init_func)();
+    bool success = _initialize();
     MBED_ASSERT(success);
 }
 
@@ -150,7 +122,7 @@ qspi_status_t QSPI::read(int address, char *rx_buffer, size_t *rx_length)
             if (*rx_length != 0) {
                 lock();
                 if (true == _acquire()) {
-                    _build_qspi_command(QSPI_NO_INST, address, -1);
+                    _build_qspi_command(-1, address, -1);
                     if (QSPI_STATUS_OK == qspi_read(&_qspi, &_qspi_command, rx_buffer, rx_length)) {
                         ret_status = QSPI_STATUS_OK;
                     }
@@ -174,7 +146,7 @@ qspi_status_t QSPI::write(int address, const char *tx_buffer, size_t *tx_length)
             if (*tx_length != 0) {
                 lock();
                 if (true == _acquire()) {
-                    _build_qspi_command(QSPI_NO_INST, address, -1);
+                    _build_qspi_command(-1, address, -1);
                     if (QSPI_STATUS_OK == qspi_write(&_qspi, &_qspi_command, tx_buffer, tx_length)) {
                         ret_status = QSPI_STATUS_OK;
                     }
@@ -189,7 +161,7 @@ qspi_status_t QSPI::write(int address, const char *tx_buffer, size_t *tx_length)
     return ret_status;
 }
 
-qspi_status_t QSPI::read(qspi_inst_t instruction, int alt, int address, char *rx_buffer, size_t *rx_length)
+qspi_status_t QSPI::read(int instruction, int alt, int address, char *rx_buffer, size_t *rx_length)
 {
     qspi_status_t ret_status = QSPI_STATUS_ERROR;
 
@@ -213,7 +185,7 @@ qspi_status_t QSPI::read(qspi_inst_t instruction, int alt, int address, char *rx
     return ret_status;
 }
 
-qspi_status_t QSPI::write(qspi_inst_t instruction, int alt, int address, const char *tx_buffer, size_t *tx_length)
+qspi_status_t QSPI::write(int instruction, int alt, int address, const char *tx_buffer, size_t *tx_length)
 {
     qspi_status_t ret_status = QSPI_STATUS_ERROR;
 
@@ -237,7 +209,7 @@ qspi_status_t QSPI::write(qspi_inst_t instruction, int alt, int address, const c
     return ret_status;
 }
 
-qspi_status_t QSPI::command_transfer(qspi_inst_t instruction, int address, const char *tx_buffer, size_t tx_length, const char *rx_buffer, size_t rx_length)
+qspi_status_t QSPI::command_transfer(int instruction, int address, const char *tx_buffer, size_t tx_length, const char *rx_buffer, size_t rx_length)
 {
     qspi_status_t ret_status = QSPI_STATUS_ERROR;
 
@@ -283,42 +255,24 @@ bool QSPI::_initialize()
     return _initialized;
 }
 
-// Note: Private helper function to initialize qspi HAL
-bool QSPI::_initialize_direct()
-{
-    if (_mode != 0 && _mode != 1) {
-        _initialized = false;
-        return _initialized;
-    }
-
-    qspi_status_t ret = qspi_init_direct(&_qspi, _static_pinmap, _hz, _mode);
-    if (QSPI_STATUS_OK == ret) {
-        _initialized = true;
-    } else {
-        _initialized = false;
-    }
-
-    return _initialized;
-}
-
 // Note: Private function with no locking
 bool QSPI::_acquire()
 {
     if (_owner != this) {
         //This will set freq as well
-        (this->*_init_func)();
+        _initialize();
         _owner = this;
     }
 
     return _initialized;
 }
 
-void QSPI::_build_qspi_command(qspi_inst_t instruction, int address, int alt)
+void QSPI::_build_qspi_command(int instruction, int address, int alt)
 {
     memset(&_qspi_command, 0,  sizeof(qspi_command_t));
     //Set up instruction phase parameters
     _qspi_command.instruction.bus_width = _inst_width;
-    if (instruction != QSPI_NO_INST) {
+    if (instruction != -1) {
         _qspi_command.instruction.value = instruction;
         _qspi_command.instruction.disabled = false;
     } else {

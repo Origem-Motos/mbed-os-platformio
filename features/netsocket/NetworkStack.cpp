@@ -24,29 +24,15 @@
 
 // Default NetworkStack operations
 
-nsapi_error_t NetworkStack::get_ip_address(SocketAddress *address)
-{
-    return NSAPI_ERROR_UNSUPPORTED;
-}
-
 const char *NetworkStack::get_ip_address()
 {
-    return nullptr;
-}
-
-nsapi_error_t NetworkStack::get_ipv6_link_local_address(SocketAddress *address)
-{
-    return NSAPI_ERROR_UNSUPPORTED;
-}
-
-nsapi_error_t NetworkStack::get_ip_address_if(SocketAddress *address, const char *interface_name)
-{
-    return NSAPI_ERROR_UNSUPPORTED;
+    return 0;
 }
 
 const char *NetworkStack::get_ip_address_if(const char *interface_name)
 {
-    return nullptr;
+    return 0;
+
 }
 
 nsapi_error_t NetworkStack::gethostbyname(const char *name, SocketAddress *address, nsapi_version_t version, const char *interface_name)
@@ -68,7 +54,7 @@ nsapi_error_t NetworkStack::gethostbyname(const char *name, SocketAddress *addre
     // ip address of the underlying stack
     if (version == NSAPI_UNSPEC) {
         SocketAddress testaddress;
-        if (this->get_ip_address(&testaddress) == NSAPI_ERROR_OK) {
+        if (testaddress.set_ip_address(this->get_ip_address())) {
             version = testaddress.get_ip_version();
         }
     }
@@ -98,7 +84,7 @@ nsapi_value_or_error_t NetworkStack::gethostbyname_async(const char *name, hostb
     // ip address of the underlying stack
     if (version == NSAPI_UNSPEC) {
         SocketAddress testaddress;
-        if (this->get_ip_address(&testaddress) == NSAPI_ERROR_OK) {
+        if (testaddress.set_ip_address(this->get_ip_address())) {
             version = testaddress.get_ip_version();
         }
     }

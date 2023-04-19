@@ -68,10 +68,6 @@ typedef enum {
     CAN_1 = (int)CAN1_BASE
 } CANName;
 
-typedef enum {
-    USB_FS = (int)USB_BASE,
-} USBName;
-
 #ifdef __cplusplus
 }
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, 2017-2020, Pelion and affiliates.
+ * Copyright (c) 2014-2015, 2017-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -240,8 +240,6 @@ int8_t thread_bootstrap_down(protocol_interface_info_entry_t *cur)
     tr_debug("SET thread Idle");
     //stop polling
     mac_data_poll_disable(cur);
-    // Reset MAC for safe upper layer memory free
-    protocol_mac_reset(cur);
     //Clean mle table
     thread_neighbor_list_clean(cur);
     // store frame counters
@@ -381,7 +379,7 @@ void thread_key_guard_timer_calculate(protocol_interface_info_entry_t *cur, link
     }
 
     cur->thread_info->masterSecretMaterial.keyRotation = key_rotation * 3600; // setting value is hours converting to seconds
-    cur->thread_info->masterSecretMaterial.keySwitchGuardTimer = is_init ? 0 : (key_rotation * 3600 * 93 / 100);
+    cur->thread_info->masterSecretMaterial.keySwitchGuardTimer = is_init ? 0 : (key_rotation * 3600 * 0.93);
 }
 
 void thread_key_guard_timer_reset(protocol_interface_info_entry_t *cur)
@@ -2006,7 +2004,7 @@ void thread_reset_neighbour_info(protocol_interface_info_entry_t *cur, mac_neigh
 
     if (!thread_i_am_router(cur) && thread_endnode_parent && thread_endnode_parent->shortAddress == neighbour->mac16) {
         if (cur->nwk_bootstrap_state != ER_CHILD_ID_REQ) {
-            tr_warn("End device lost parent, reset!");
+            tr_warn("End device lost parent, reset!\n");
             thread_bootstrap_connection_error(cur->id, CON_PARENT_CONNECT_DOWN, NULL);
         }
     }
@@ -2238,18 +2236,18 @@ int thread_common_primary_bbr_get(struct protocol_interface_info_entry *cur, uin
                 (service_tlv_ptr[0] & 0x80) && // THREAD_ENTERPRISE_NUMBER
                 service_tlv_ptr[1] == 1 && // length 1
                 service_tlv_ptr[2] == THREAD_SERVICE_DATA_BBR) {
-            //tr_info("BBR service TLV: %s", trace_array(service_tlv_ptr, service_tlv_len));
+            //tr_info("BBR service TLV: %s\r\n", trace_array(service_tlv_ptr, service_tlv_len));
             // try to parse SUB-TLVs
             // network_data_server_tlv_parse(service_tlv_ptr, tlv_length);
             uint16_t server_tlv_len = 0;
             uint8_t *server_tlv_ptr = thread_common_server_tlv_list_get(service_tlv_ptr, service_tlv_len, &server_tlv_len);
             uint16_t found_tlv_len;
             uint8_t *found_tlv = NULL;
-            //tr_info("BBR server TLV: %s", trace_array(server_tlv_ptr, server_tlv_len));
+            //tr_info("BBR server TLV: %s\r\n", trace_array(server_tlv_ptr, server_tlv_len));
             do {
                 found_tlv_len = thread_meshcop_tlv_find_next(server_tlv_ptr, server_tlv_len, THREAD_NWK_DATA_TYPE_SERVER_DATA | THREAD_NWK_STABLE_DATA, &found_tlv);
                 if (found_tlv && found_tlv_len > 8) {
-                    //tr_info("BBR server TLV: %s", trace_array(found_tlv, found_tlv_len));
+                    //tr_info("BBR server TLV: %s\r\n", trace_array(found_tlv, found_tlv_len));
                     if (addr_ptr) {
                         thread_addr_write_mesh_local_16(addr_ptr, common_read_16_bit(found_tlv), cur->thread_info);
                     }

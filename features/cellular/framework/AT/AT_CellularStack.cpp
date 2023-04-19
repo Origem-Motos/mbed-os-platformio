@@ -55,51 +55,6 @@ int AT_CellularStack::find_socket_index(nsapi_socket_t handle)
 
 /** NetworkStack
  */
-nsapi_error_t AT_CellularStack::get_ip_address(SocketAddress *address)
-{
-    if (!address) {
-        return NSAPI_ERROR_PARAMETER;
-    }
-    _at.lock();
-
-    bool ipv4 = false, ipv6 = false;
-
-    _at.cmd_start_stop("+CGPADDR", "=", "%d", _cid);
-    _at.resp_start("+CGPADDR:");
-
-    if (_at.info_resp()) {
-        _at.skip_param();
-
-        if (_at.read_string(_ip, PDP_IPV6_SIZE) != -1) {
-            convert_ipv6(_ip);
-            address->set_ip_address(_ip);
-
-            ipv4 = (address->get_ip_version() == NSAPI_IPv4);
-            ipv6 = (address->get_ip_version() == NSAPI_IPv6);
-
-            // Try to look for second address ONLY if modem has support for dual stack(can handle both IPv4 and IPv6 simultaneously).
-            // Otherwise assumption is that second address is not reliable, even if network provides one.
-            if ((get_property(PROPERTY_IPV4V6_PDP_TYPE) && (_at.read_string(_ip, PDP_IPV6_SIZE) != -1))) {
-                convert_ipv6(_ip);
-                address->set_ip_address(_ip);
-                ipv6 = (address->get_ip_version() == NSAPI_IPv6);
-            }
-        }
-    }
-    _at.resp_stop();
-    _at.unlock();
-
-    if (ipv4 && ipv6) {
-        _stack_type = IPV4V6_STACK;
-    } else if (ipv4) {
-        _stack_type = IPV4_STACK;
-    } else if (ipv6) {
-        _stack_type = IPV6_STACK;
-    }
-
-    return (ipv4 || ipv6) ? NSAPI_ERROR_OK : NSAPI_ERROR_NO_ADDRESS;
-}
-
 const char *AT_CellularStack::get_ip_address()
 {
     _at.lock();
@@ -206,7 +161,7 @@ nsapi_error_t AT_CellularStack::socket_close(nsapi_socket_t handle)
 
     struct CellularSocket *socket = (struct CellularSocket *)handle;
     if (!socket) {
-        return NSAPI_ERROR_NO_SOCKET;
+        return err;
     }
     int sock_id = socket->id;
 
@@ -242,7 +197,7 @@ nsapi_error_t AT_CellularStack::socket_bind(nsapi_socket_t handle, const SocketA
 {
     struct CellularSocket *socket = (CellularSocket *)handle;
     if (!socket) {
-        return NSAPI_ERROR_NO_SOCKET;
+        return NSAPI_ERROR_DEVICE_ERROR;
     }
 
     if (addr) {
@@ -270,14 +225,14 @@ nsapi_error_t AT_CellularStack::socket_bind(nsapi_socket_t handle, const SocketA
 
 nsapi_error_t AT_CellularStack::socket_listen(nsapi_socket_t handle, int backlog)
 {
-    return NSAPI_ERROR_UNSUPPORTED;
+    return NSAPI_ERROR_UNSUPPORTED;;
 }
 
 nsapi_error_t AT_CellularStack::socket_connect(nsapi_socket_t handle, const SocketAddress &addr)
 {
     CellularSocket *socket = (CellularSocket *)handle;
     if (!socket) {
-        return NSAPI_ERROR_NO_SOCKET;
+        return NSAPI_ERROR_DEVICE_ERROR;
     }
     socket->remoteAddress = addr;
     socket->connected = true;
@@ -287,17 +242,14 @@ nsapi_error_t AT_CellularStack::socket_connect(nsapi_socket_t handle, const Sock
 
 nsapi_error_t AT_CellularStack::socket_accept(void *server, void **socket, SocketAddress *addr)
 {
-    return NSAPI_ERROR_UNSUPPORTED;
+    return NSAPI_ERROR_UNSUPPORTED;;
 }
 
 nsapi_size_or_error_t AT_CellularStack::socket_send(nsapi_socket_t handle, const void *data, unsigned size)
 {
     CellularSocket *socket = (CellularSocket *)handle;
-    if (!socket) {
-        return NSAPI_ERROR_NO_SOCKET;
-    }
-    if (!socket->connected) {
-        return NSAPI_ERROR_NO_CONNECTION;
+    if (!socket || !socket->connected) {
+        return NSAPI_ERROR_DEVICE_ERROR;
     }
     return socket_sendto(handle, socket->remoteAddress, data, size);
 }
@@ -306,10 +258,10 @@ nsapi_size_or_error_t AT_CellularStack::socket_sendto(nsapi_socket_t handle, con
 {
     CellularSocket *socket = (CellularSocket *)handle;
     if (!socket) {
-        return NSAPI_ERROR_NO_SOCKET;
+        return NSAPI_ERROR_DEVICE_ERROR;
     }
 
-    if (socket->closed && !socket->pending_bytes) {
+    if (socket->closed && !socket->rx_avail) {
         tr_info("sendto socket %d closed", socket->id);
         return NSAPI_ERROR_NO_CONNECTION;
     }
@@ -372,7 +324,7 @@ nsapi_size_or_error_t AT_CellularStack::socket_recvfrom(nsapi_socket_t handle, S
 {
     CellularSocket *socket = (CellularSocket *)handle;
     if (!socket) {
-        return NSAPI_ERROR_NO_SOCKET;
+        return NSAPI_ERROR_DEVICE_ERROR;
     }
 
     if (socket->closed) {

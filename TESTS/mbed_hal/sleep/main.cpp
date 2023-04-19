@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #if !DEVICE_SLEEP
 #error [NOT_SUPPORTED] sleep not supported for this target
 #else
@@ -215,9 +216,7 @@ utest::v1::status_t greentea_test_setup(const size_t number_of_cases)
 {
     GREENTEA_SETUP(60, "default_auto");
     /* Suspend RTOS Kernel to enable sleep modes. */
-#if defined(MBED_CONF_RTOS_PRESENT)
     osKernelSuspend();
-#endif
 #if DEVICE_LPTICKER
     ticker_suspend(get_lp_ticker_data());
 #if DEVICE_LPTICKER && (LPTICKER_DELAY_TICKS > 0)
@@ -243,9 +242,8 @@ void greentea_test_teardown(const size_t passed, const size_t failed, const fail
 #endif
     ticker_resume(get_lp_ticker_data());
 #endif
-#if defined(MBED_CONF_RTOS_PRESENT)
     osKernelResume(0);
-#endif
+
     greentea_test_teardown_handler(passed, failed, failure);
 }
 

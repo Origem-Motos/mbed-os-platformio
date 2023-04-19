@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2019, 2021, Pelion and affiliates.
+ * Copyright (c) 2013-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,7 +89,7 @@ typedef enum pana_client_nvm_update_process_t {
 } pana_client_nvm_update_process_t;
 
 /*!
- * \struct wpan_nvm_params
+ * \struct wpan_nvm_params_t
  * \brief Network nvm parameters.
  */
 typedef struct wpan_nvm_params {

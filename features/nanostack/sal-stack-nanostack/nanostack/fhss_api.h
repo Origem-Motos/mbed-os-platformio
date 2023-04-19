@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, 2021, Pelion and affiliates.
+ * Copyright (c) 2016-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,6 @@ typedef struct fhss_callback fhss_callback_t;
 typedef enum {
     FHSS_UNSYNCHRONIZED,
     FHSS_SYNCHRONIZED,
-    FHSS_EXPEDITED_FORWARDING
 } fhss_states;
 
 /**
@@ -123,10 +122,9 @@ typedef void fhss_data_tx_done(const fhss_api_t *api, bool waiting_ack, bool tx_
  * @param api FHSS instance.
  * @param handle Handle of the data request.
  * @param frame_type Frame type of packet (Frames types are defined by FHSS api).
- * @param channel Channel wanted to black list temporarily.
  * @return true if frame has to be queued for retransmission, false otherwise.
  */
-typedef bool fhss_data_tx_fail(const fhss_api_t *api, uint8_t handle, int frame_type, uint8_t channel);
+typedef bool fhss_data_tx_fail(const fhss_api_t *api, uint8_t handle, int frame_type);
 
 /**
  * @brief Change synchronization state.

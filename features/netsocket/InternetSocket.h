@@ -46,11 +46,7 @@ public:
      *  @note Not needed if stack is passed to the socket's constructor.
      *
      *  @param stack    Network stack as target for socket.
-     *  @retval         NSAPI_ERROR_OK on success.
-     *  @retval         NSAPI_ERROR_PARAMETER in case the provided stack was invalid
-     *                  or a stack was already created and socket opened successfully.
-     *  @retval         int negative error codes for stack-related failures.
-     *                  See @ref NetworkStack::socket_open.
+     *  @return         0 on success, negative error code on failure (@see nsapi_types.h).
      */
     nsapi_error_t open(NetworkStack *stack);
 
@@ -65,63 +61,28 @@ public:
     /** Close any open connection, and deallocate any memory associated
      *  with the socket. Called from destructor if socket is not closed.
      *
-     *  @retval         NSAPI_ERROR_OK on success.
-     *  @retval         NSAPI_ERROR_NO_SOCKET if socket is not open.
-     *  @retval         int negative error codes for stack-related failures.
-     *                  See @ref NetworkStack::socket_close.
+     *  @return         0 on success, negative error code on failure (@see nsapi_types.h).
      */
     virtual nsapi_error_t close();
 
     /** Subscribe to an IP multicast group.
      *
      * @param address   Multicast group IP address.
-     *  @return         NSAPI_ERROR_OK on success, negative error code on failure (@see InternetSocket::setsockopt).
+     *  @return         0 on success, negative error code on failure (@see nsapi_types.h).
      */
     int join_multicast_group(const SocketAddress &address);
 
     /** Leave an IP multicast group.
      *
      * @param address   Multicast group IP address.
-     *  @return         NSAPI_ERROR_OK on success, negative error code on failure (@see InternetSocket::setsockopt).
+     *  @return         0 on success, negative error code on failure (@see nsapi_types.h).
      */
     int leave_multicast_group(const SocketAddress &address);
-
-    /** Get estimated round trip time to destination address.
-     *
-     * Use estimated round trip time to adjust application retry timers to work in networks
-     * that have low data rate and high latency.
-     *
-     * @param address   Destination address to use in rtt estimate.
-     * @param rtt_estimate   Returned round trip time value in milliseconds.
-     *  @return         NSAPI_ERROR_OK on success.
-     *  @return         NSAPI_ERROR_PARAMETER if the provided pointer is invalid.
-     *  @return         negative error code on other failures (@see InternetSocket::getsockopt).
-     */
-    int get_rtt_estimate_to_address(const SocketAddress &address, uint32_t *rtt_estimate);
-
-    /** Get estimated stagger value.
-     *
-     * Stagger value is a time that application should wait before using heavy network operations after connecting to network.
-     * Purpose of staggering is to avoid network congestion that may happen in low bandwith networks if multiple
-     * applications simultaneously start heavy network usage after joining to the network.
-     *
-     * @param address       Destination added used to estimate stagger value.
-     * @param data_amount   Amount of bytes to transfer in kilobytes.
-     * @param stagger_min   Minimum stagger value in seconds.
-     * @param stagger_max   Maximum stagger value in seconds.
-     * @param stagger_rand  Randomized stagger value between stagger_min and stagger_max in seconds.
-     * @return              NSAPI_ERROR_OK on success.
-     * @return              negative error code on other failures (@see InternetSocket::getsockopt).
-     */
-    int get_stagger_estimate_to_address(const SocketAddress &address, uint16_t data_amount, uint16_t *stagger_min, uint16_t *stagger_max, uint16_t *stagger_rand);
 
     /** Bind the socket to a port on which to receive data.
      *
      *  @param port     Local port to bind.
-     *  @retval         NSAPI_ERROR_OK on success.
-     *  @retval         NSAPI_ERROR_NO_SOCKET if socket is not open.
-     *  @retval         int negative error codes for stack-related failures.
-     *                  See @ref NetworkStack::socket_bind.
+     *  @return         0 on success, negative error code on failure (@see nsapi_types.h).
      */
     nsapi_error_t bind(uint16_t port);
 
@@ -130,12 +91,8 @@ public:
      *
      *  @param address  Null-terminated local address to bind.
      *  @param port     Local port to bind.
-     *  @retval         NSAPI_ERROR_OK on success.
-     *  @retval         NSAPI_ERROR_NO_SOCKET if socket is not open.
-     *  @retval         int negative error codes for stack-related failures.
-     *                  See @ref NetworkStack::socket_bind.
+     *  @return         0 on success, negative error code on failure (@see nsapi_types.h).
      */
-    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
     nsapi_error_t bind(const char *address, uint16_t port);
 
     /** @copydoc Socket::bind

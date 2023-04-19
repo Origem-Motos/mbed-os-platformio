@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020, Pelion and affiliates.
+ * Copyright (c) 2016-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,6 @@
 #include "nsdynmemLIB.h"
 #include "common_functions.h"
 #include "MAC/rf_driver_storage.h"
-#include "Core/include/ns_monitor.h"
 
 typedef struct eth_mac_internal_s {
     eth_mac_api_t *mac_api;
@@ -267,11 +266,6 @@ static int8_t eth_mac_net_phy_rx(const uint8_t *data_ptr, uint16_t data_len, uin
     }
 
     if (data_len == 0) {
-        return -1;
-    }
-
-    if (!ns_monitor_packet_allocation_allowed()) {
-        // stack can not handle new packets for routing
         return -1;
     }
 

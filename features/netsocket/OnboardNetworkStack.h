@@ -109,40 +109,42 @@ public:
 
         virtual char *get_mac_address(char *buf, nsapi_size_t buflen) = 0;
 
-        /** @copydoc NetworkStack::get_ip_address */
-        virtual nsapi_error_t get_ip_address(SocketAddress *address) = 0;
+        /** Copies IP address of the network interface to user supplied buffer
+         *
+         * @param    buf        buffer to which IP address will be copied as "W:X:Y:Z"
+         * @param    buflen     size of supplied buffer
+         * @param    interface_name  Network interface name
+         * @return              Pointer to a buffer, or NULL if the buffer is too small
+         */
 
-        MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
         virtual char *get_ip_address(char *buf, nsapi_size_t buflen) = 0;
 
-        /** @copydoc NetworkStack::get_ipv6_link_local_address */
-        virtual nsapi_error_t get_ipv6_link_local_address(SocketAddress *address)
-        {
-            return NSAPI_ERROR_UNSUPPORTED;
-        }
-
-        /** @copydoc NetworkStack::get_ip_address_if */
-        virtual nsapi_error_t get_ip_address_if(SocketAddress *address, const char *interface_name)
-        {
-            return NSAPI_ERROR_UNSUPPORTED;
-        }
-
-        MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
+        /** Copies IP address of the network interface to user supplied buffer
+         *
+         * @param    buf        buffer to which IP address will be copied as "W:X:Y:Z"
+         * @param    buflen     size of supplied buffer
+         * @param    interface_name  Network interface name
+         * @return              Pointer to a buffer, or NULL if the buffer is too small
+         */
         virtual char *get_ip_address_if(char *buf, nsapi_size_t buflen, const char *interface_name)
         {
             return NULL;
         };
 
-        /** @copydoc NetworkStack::get_netmask */
-        virtual nsapi_error_t get_netmask(SocketAddress *address) = 0;
-
-        MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
+        /** Copies netmask of the network interface to user supplied buffer
+         *
+         * @param    buf        buffer to which netmask will be copied as "W:X:Y:Z"
+         * @param    buflen     size of supplied buffer
+         * @return              Pointer to a buffer, or NULL if the buffer is too small
+         */
         virtual char *get_netmask(char *buf, nsapi_size_t buflen) = 0;
 
-        /** @copydoc NetworkStack::get_gateway */
-        virtual nsapi_error_t get_gateway(SocketAddress *address) = 0;
-
-        MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
+        /** Copies gateway address of the network interface to user supplied buffer
+         *
+         * @param    buf        buffer to which gateway address will be copied as "W:X:Y:Z"
+         * @param    buflen     size of supplied buffer
+         * @return              Pointer to a buffer, or NULL if the buffer is too small
+         */
         virtual char *get_gateway(char *buf, nsapi_size_t buflen) = 0;
     };
 
@@ -159,11 +161,6 @@ public:
      */
     virtual nsapi_error_t add_ethernet_interface(EMAC &emac, bool default_if, Interface **interface_out) = 0;
 
-    virtual nsapi_error_t add_ethernet_interface(EMAC &emac, bool default_if, Interface **interface_out, const uint8_t *mac_addr)
-    {
-        return NSAPI_ERROR_UNSUPPORTED;
-    }
-
     virtual nsapi_error_t add_l3ip_interface(L3IP &l3ip, bool default_if, Interface **interface_out)
     {
         return NSAPI_ERROR_OK;
@@ -172,11 +169,6 @@ public:
     virtual nsapi_error_t add_ppp_interface(PPP &ppp, bool default_if, Interface **interface_out)
     {
         return NSAPI_ERROR_UNSUPPORTED;
-    };
-
-    virtual nsapi_error_t remove_ethernet_interface(Interface **interface_out)
-    {
-        return NSAPI_ERROR_OK;
     };
 
     virtual nsapi_error_t remove_l3ip_interface(Interface **interface_out)

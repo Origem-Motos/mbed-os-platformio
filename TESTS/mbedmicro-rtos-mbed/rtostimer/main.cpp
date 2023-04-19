@@ -13,11 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#if !defined(MBED_CONF_RTOS_PRESENT)
-#error [NOT_SUPPORTED] RTOS timer test cases require RTOS to run
-#else
-
 #include "mbed.h"
 #include "greentea-client/test_env.h"
 #include "unity.h"
@@ -365,4 +360,3 @@ int main()
 
 #endif // !DEVICE_USTICKER
 #endif // RESTART_DELAY_MS >= DELAY_MS
-#endif

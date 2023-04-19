@@ -20,11 +20,9 @@
 /*
  * Based on mbed-stress-test by Marcus Chang @ Arm Mbed - http://github.com/ARMmbed/mbed-stress-test
 */
-#if INTEGRATION_TESTS
 
 #include "mbed.h"
 #include "unity/unity.h"
-#include "file_test.h"
 
 void file_test_write(const char *file, size_t offset, const unsigned char *data, size_t data_length, size_t block_size)
 {
@@ -59,8 +57,8 @@ void file_test_write(const char *file, size_t offset, const unsigned char *data,
     TEST_ASSERT_EQUAL_INT_MESSAGE(0, result, "could not close file");
 
     timer.stop();
-    tr_info("[FS] Wrote: \"%s\" %.2fKB (%.2fKB/s, %.2f secs)", file,
-            float(data_length) / 1024, float(data_length) / timer.read() / 1024, timer.read());
+    printf("[FS] Wrote: \"%s\" %.2fKB (%.2fKB/s, %.2f secs)\r\n", file,
+           float(data_length) / 1024, float(data_length) / timer.read() / 1024, timer.read());
 }
 
 void file_test_read(const char *file, size_t offset, const unsigned char *data, size_t data_length, size_t block_size)
@@ -101,8 +99,7 @@ void file_test_read(const char *file, size_t offset, const unsigned char *data, 
 
     free(buffer);
 
-    tr_info("[FS] Read : \"%s\" %.2fKB (%.2fKB/s, %.2f secs)", file,
-            float(data_length) / 1024, float(data_length) / timer.read() / 1024, timer.read());
+    printf("[FS] Read : \"%s\" %.2fKB (%.2fKB/s, %.2f secs)\r\n", file,
+           float(data_length) / 1024, float(data_length) / timer.read() / 1024, timer.read());
 }
 
-#endif //#if INTEGRATION_TESTS

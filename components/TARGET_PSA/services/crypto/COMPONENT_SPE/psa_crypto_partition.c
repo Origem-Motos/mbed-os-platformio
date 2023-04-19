@@ -160,6 +160,25 @@ psa_status_t psa_cipher_decrypt(psa_key_handle_t handle,
     return PSA_ERROR_NOT_SUPPORTED;
 }
 
+psa_status_t psa_hash_compute(psa_algorithm_t alg,
+                              const uint8_t *input,
+                              size_t input_length,
+                              uint8_t *hash,
+                              size_t hash_size,
+                              size_t *hash_length)
+{
+    return PSA_ERROR_NOT_SUPPORTED;
+}
+
+psa_status_t psa_hash_compare(psa_algorithm_t alg,
+                              const uint8_t *input,
+                              size_t input_length,
+                              const uint8_t *hash,
+                              const size_t hash_length)
+{
+    return PSA_ERROR_NOT_SUPPORTED;
+}
+
 psa_status_t psa_mac_compute(psa_key_handle_t handle,
                              psa_algorithm_t alg,
                              const uint8_t *input,
@@ -970,7 +989,7 @@ static void psa_asymmetric_operation(void)
             }
 
             switch (psa_crypto.func) {
-                case PSA_SIGN_HASH: {
+                case PSA_ASYMMETRIC_SIGN: {
                     uint8_t *signature = NULL;
                     uint8_t *hash = NULL;
                     size_t signature_length = 0,
@@ -996,9 +1015,9 @@ static void psa_asymmetric_operation(void)
                     }
 
                     if (status == PSA_SUCCESS) {
-                        status = psa_sign_hash(psa_crypto.handle, psa_crypto.alg,
-                                               hash, hash_size,
-                                               signature, signature_size, &signature_length);
+                        status = psa_asymmetric_sign(psa_crypto.handle, psa_crypto.alg,
+                                                     hash, hash_size,
+                                                     signature, signature_size, &signature_length);
 
                         if (status == PSA_SUCCESS) {
                             psa_write(msg.handle, 0, signature, signature_length);
@@ -1011,7 +1030,7 @@ static void psa_asymmetric_operation(void)
                     break;
                 }
 
-                case PSA_VERIFY_HASH: {
+                case PSA_ASYMMETRIC_VERIFY: {
                     uint8_t *signature = NULL;
                     uint8_t *hash = NULL;
                     size_t signature_size = msg.in_size[1],
@@ -1041,9 +1060,9 @@ static void psa_asymmetric_operation(void)
                     }
 
                     if (status == PSA_SUCCESS) {
-                        status = psa_verify_hash(psa_crypto.handle, psa_crypto.alg,
-                                                 hash, hash_size,
-                                                 signature, signature_size);
+                        status = psa_asymmetric_verify(psa_crypto.handle, psa_crypto.alg,
+                                                       hash, hash_size,
+                                                       signature, signature_size);
                     }
 
                     mbedtls_free(signature);

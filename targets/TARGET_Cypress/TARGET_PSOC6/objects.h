@@ -94,8 +94,6 @@ struct i2c_s {
     size_t async_rx_size;
 #endif
     uint8_t slave_event;
-    uint32_t address;
-    bool address_set;
 };
 #endif
 
@@ -111,7 +109,6 @@ struct spi_s {
     cyhal_gpio_t sclk;
     cyhal_gpio_t ssel;
     int hz;
-    bool async_in_progress;
 };
 #endif
 

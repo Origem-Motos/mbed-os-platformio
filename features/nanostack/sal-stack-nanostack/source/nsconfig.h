@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, Pelion and affiliates.
+ * Copyright (c) 2014-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +23,10 @@
 #define _NANOSTACK_SOURCE_CONFIG_H
 
 #include "ns_types.h"
+
+#ifdef __CC_ARM
+#pragma diag_suppress 546 // transfer of control bypasses initialization
+#endif
 
 #define __ns_cfg_header(x) #x
 #define _ns_cfg_header(x) __ns_cfg_header(configs/cfg_##x.h)
@@ -54,13 +58,6 @@
 #endif
 #endif /* HAVE_WS */
 
-/* Configure trace level for Nanostack */
-#ifdef MBED_CONF_NANOSTACK_TRACE_MAX_LEVEL
-#ifdef MBED_TRACE_MAX_LEVEL
-#undef MBED_TRACE_MAX_LEVEL
-#endif /* MBED_TRACE_MAX_LEVEL */
-#define MBED_TRACE_MAX_LEVEL MBED_CONF_NANOSTACK_TRACE_MAX_LEVEL
-#endif /* MBED_CONF_NANOSTACK_TRACE_MAX_LEVEL */
 
 #endif // ifndef _NANOSTACK_SOURCE_CONFIG_H
 

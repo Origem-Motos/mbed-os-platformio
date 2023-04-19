@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2015, 2017-2021, Pelion and affiliates.
+ * Copyright (c) 2008-2015, 2017-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,8 +44,6 @@
 #define RANDOM_PORT_NUMBER_END 65535
 #define RANDOM_PORT_NUMBER_COUNT (RANDOM_PORT_NUMBER_END - RANDOM_PORT_NUMBER_START + 1)
 #define RANDOM_PORT_NUMBER_MAX_STEP 500
-
-static bool socket_reference_limit(socket_t *socket_ptr);
 
 static uint16_t port_counter;
 
@@ -115,7 +113,6 @@ socket_t *socket_pointer_get(int8_t socket)
 
 static void socket_data_event_push(buffer_t *buf)
 {
-    buf->socket = socket_reference(buf->socket);
     arm_event_s event = {
         .receiver = socket_event_handler,
         .sender = 0,
@@ -140,7 +137,6 @@ bool socket_data_queued_event_push(socket_t *socket)
     };
 
     if (eventOS_event_send(&event) != 0) {
-        socket_dereference(socket);
         return false;
     }
     return true;
@@ -171,8 +167,12 @@ static void socket_cb_event_run(const socket_cb_event_t *event)
     }
 }
 
-static void socket_buffer_cb_run(socket_t *socket, buffer_t *buffer)
+void socket_buffer_cb_run(socket_t *socket, buffer_t *buffer)
 {
+    if (socket->id == -1 || !socket->u.live.fptr) {
+        buffer_free(buffer);
+        return;
+    }
 
     eventOS_scheduler_set_active_tasklet(socket->tasklet);
 
@@ -222,19 +222,9 @@ void socket_tasklet_event_handler(arm_event_s *event)
         }
         case ARM_SOCKET_DATA_CB: {
             buffer_t *buf = event->data_ptr;
-
-            if (!buf || !buf->socket) {
-                tr_error("Socket CB: Buf or Socket pointer NULL");
-                buffer_free(buf);
-                break;
-            }
-
-            socket_t *socket = buf->socket;
-
-            if (socket->id == -1 || !socket->u.live.fptr) {
-                //Socket is released Free just Buffer
-                buffer_free(buf);
-            } else if (socket->flags & SOCKET_BUFFER_CB) {
+            /* Reference the socket here*/
+            socket_t *socket = socket_reference(buf->socket);
+            if (socket->flags & SOCKET_BUFFER_CB) {
                 // They just take ownership of the buffer. No read calls.
                 socket_buffer_cb_run(socket, buf);
             } else {
@@ -253,9 +243,7 @@ void socket_tasklet_event_handler(arm_event_s *event)
         }
         case ARM_SOCKET_DATA_QUEUED_CB: {
             socket_t *socket = event->data_ptr;
-            if (socket) {
-                socket_cb_run(socket);
-            }
+            socket_cb_run(socket);
             socket_dereference(socket);
             break;
         }
@@ -299,16 +287,14 @@ void socket_release(socket_t *socket)
         if (tcp_info(socket->inet_pcb)) {
             /* This may trigger a reset if pending data. Do it first so you
              * get just the reset, rather than a FIN. */
-            tcp_error sock_status = tcp_session_shutdown_read(tcp_info(socket->inet_pcb));
+            tcp_session_shutdown_read(tcp_info(socket->inet_pcb));
             /* This can also cause TCP deletion */
             if (tcp_info(socket->inet_pcb)) {
-                sock_status = tcp_session_close(tcp_info(socket->inet_pcb));
+                tcp_session_close(tcp_info(socket->inet_pcb));
             }
             if (tcp_info(socket->inet_pcb)) {
                 tcp_socket_released(tcp_info(socket->inet_pcb));
             }
-            // prevent warning "statement with no effect" when TCP is disabled
-            (void) sock_status;
         } else {
             /* Unbind the internet control block - ensures users are not prevented
              * from binding a new socket to the same port if the socket lingers
@@ -354,7 +340,7 @@ static void socket_free(socket_t *socket)
     ns_dyn_mem_free(socket);
 }
 
-socket_error_t socket_port_validate(uint16_t port, uint8_t protocol)
+error_t socket_port_validate(uint16_t port, uint8_t protocol)
 {
     ns_list_foreach(socket_t, socket, &socket_list) {
         if (!socket_is_ipv6(socket)) {
@@ -413,8 +399,6 @@ inet_pcb_t *socket_inet_pcb_allocate(void)
     inet_pcb->recvhoplimit = false;
     inet_pcb->recvpktinfo = false;
     inet_pcb->recvtclass = false;
-    inet_pcb->edfe_mode = false;
-
     inet_pcb->link_layer_security = -1;
 #ifndef NO_IPV6_PMTUD
     inet_pcb->use_min_mtu = -1;
@@ -466,14 +450,6 @@ socket_t *socket_allocate(socket_type_t type)
     return socket;
 }
 
-static bool socket_reference_limit(socket_t *socket_ptr)
-{
-    if (socket_ptr && socket_ptr->refcount < SOCKET_DEFAULT_REFERENCE_LIMIT) {
-        return false;
-    }
-    return true;
-}
-
 /* Increase reference counter on socket, returning now-owned pointer */
 socket_t *socket_reference(socket_t *socket_ptr)
 {
@@ -499,7 +475,7 @@ socket_t *socket_dereference(socket_t *socket_ptr)
     }
 
     if (socket_ptr->refcount == 0) {
-        tr_error("Socket %d ref underflow", socket_ptr->id);
+        tr_error("ref underflow");
         return NULL;
     }
     if (--socket_ptr->refcount == 0) {
@@ -519,7 +495,7 @@ socket_t *socket_dereference(socket_t *socket_ptr)
  * \return eFALSE no free sockets
  * \return eBUSY port reserved
  */
-socket_error_t socket_create(socket_family_t family, socket_type_t type, uint8_t protocol, int8_t *sid, uint16_t port, void (*passed_fptr)(void *), bool buffer_type)
+error_t socket_create(socket_family_t family, socket_type_t type, uint8_t protocol, int8_t *sid, uint16_t port, void (*passed_fptr)(void *), bool buffer_type)
 {
     if (sid) {
         *sid = -1;
@@ -834,12 +810,12 @@ void socket_list_print(route_print_fn_t *print_fn, char sep)
     /* Chuck in a consistency check */
     for (int i = 0; i < SOCKETS_MAX; i++) {
         if (socket_instance[i] && socket_instance[i]->id != i) {
-            tr_err("ID %d points to %p with id %d", i, (void *)socket_instance[i], socket_instance[i]->id);
+            tr_err("ID %d points to %p with id %d\n", i, (void *)socket_instance[i], socket_instance[i]->id);
         }
     }
     ns_list_foreach(socket_t, socket, &socket_list) {
         if (socket->id != -1 && socket_pointer_get(socket->id) != socket) {
-            tr_err("Socket %p has invalid ID %d", (void *)socket, socket->id);
+            tr_err("Socket %p has invalid ID %d\n", (void *)socket, socket->id);
         }
         sockbuf_check(&socket->rcvq);
         sockbuf_check(&socket->sndq);
@@ -872,7 +848,7 @@ socket_t *socket_lookup(socket_family_t family, uint8_t protocol, const sockaddr
  * \return eFALSE no socket found
  * \return eBUSY socket full
  */
-socket_error_t socket_up(buffer_t *buf)
+error_t socket_up(buffer_t *buf)
 {
     socket_t *socket = buf->socket;
 
@@ -889,13 +865,6 @@ socket_error_t socket_up(buffer_t *buf)
     if ((socket->flags & (SOCKET_FLAG_PENDING | SOCKET_FLAG_CLOSED)) || socket->id == -1) {
         goto drop;
     }
-
-    //Limit here
-    if (socket_reference_limit(socket)) {
-        tr_error("Socket reference limit drop RX %u", socket->refcount);
-        goto drop;
-    }
-
 
     if (socket->rcvq.data_byte_limit == 0) {
         // Old-style one event per buffer
@@ -1119,7 +1088,7 @@ int16_t socket_buffer_sendmsg(int8_t sid, buffer_t *buf, const struct ns_msghdr 
 
 #ifndef NO_TCP
     if (socket_ptr->type == SOCKET_TYPE_STREAM) {
-        tcp_session_t *tcp_info = inet_pcb->session;
+        tcp_session_t *tcp_info = tcp_info(inet_pcb);
         if (!tcp_info) {
             tr_warn("No TCP session for cur Socket");
             ret_val = -3;
@@ -1139,12 +1108,6 @@ int16_t socket_buffer_sendmsg(int8_t sid, buffer_t *buf, const struct ns_msghdr 
     // TCP system has taken ownership of buffer, or we've failed
     // Everything below this point is non-TCP
 #endif //NO_TCP
-
-    if (socket_reference_limit(socket_ptr)) {
-        tr_error("Socket reference limit drop TX %u", socket_ptr->refcount);
-        ret_val = -1;
-        goto fail;
-    }
 
     /**
      * Mark Socket id to buffer meta data
@@ -1169,7 +1132,6 @@ int16_t socket_buffer_sendmsg(int8_t sid, buffer_t *buf, const struct ns_msghdr 
     buf->options.ipv6_use_min_mtu = inet_pcb->use_min_mtu;
     buf->options.ipv6_dontfrag = inet_pcb->dontfrag;
     buf->options.multicast_loop = inet_pcb->multicast_loop;
-    buf->options.edfe_mode = inet_pcb->edfe_mode;
 
     /* Set default remote address from PCB */
     if (inet_pcb->remote_port != 0 && !addr_ipv6_equal(inet_pcb->remote_address, ns_in6addr_any)) {
@@ -1400,10 +1362,8 @@ int16_t socket_buffer_sendmsg(int8_t sid, buffer_t *buf, const struct ns_msghdr 
 
     protocol_push(buf);
 
-#ifndef NO_TCP
     /* TCP jumps back to here */
 success:
-#endif
     if (flags & NS_MSG_LEGACY0) {
         return 0;
     } else {

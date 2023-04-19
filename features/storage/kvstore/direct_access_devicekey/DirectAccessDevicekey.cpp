@@ -17,7 +17,6 @@
 // ----------------------------------------------------------- Includes -----------------------------------------------------------
 #if DEVICE_FLASH
 #include "DirectAccessDevicekey.h"
-#include "drivers/FlashIAP.h"
 #include <string.h>
 #include <stdio.h>
 #include "mbed_error.h"

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, 2019, Pelion and affiliates.
+ * Copyright (c) 2015, 2017, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,8 +30,6 @@ extern int8_t nwk_6lowpan_up(struct protocol_interface_info_entry *cur);
  * 6LoWPAN interface deactivate
  */
 extern int8_t nwk_6lowpan_down(struct protocol_interface_info_entry *cur);
-
-extern void protocol_mac_reset(struct protocol_interface_info_entry *cur);
 
 
 #endif /* PROTOCOL_6LOWPAN_INTERFACE_H_ */

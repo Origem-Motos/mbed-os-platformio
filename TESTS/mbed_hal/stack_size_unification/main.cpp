@@ -15,10 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#if !defined(MBED_CONF_RTOS_PRESENT)
-#error [NOT_SUPPORTED] stack size unification test cases require a RTOS to run.
-#else
-
 #include "mbed.h"
 #include "greentea-client/test_env.h"
 #include "unity.h"
@@ -80,4 +76,3 @@ int main()
 }
 
 #endif // TARGET_RENESAS
-#endif // !defined(MBED_CONF_RTOS_PRESENT)

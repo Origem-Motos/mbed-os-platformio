@@ -13,9 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#if !MBED_CONF_BLE_PRESENT
-#error [NOT_SUPPORTED] BLE cordio test cases require the BLE library.
-#else
 
 #include <stdio.h>
 
@@ -112,5 +109,3 @@ Specification specification(greentea_test_setup, cases, greentea_test_teardown_h
 int main() {
     return !Harness::run(specification);
 }
-
-#endif // !MBED_CONF_BLE_PRESENT

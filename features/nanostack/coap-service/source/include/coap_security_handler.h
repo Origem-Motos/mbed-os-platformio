@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, 2021, Pelion and affiliates.
+ * Copyright (c) 2015-2017, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,8 +20,11 @@
 #include "ns_types.h"
 
 #ifdef NS_USE_EXTERNAL_MBED_TLS
-// cppcheck-suppress preprocessorErrorDirective
-#include "mbedtls/version.h"
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
 #if defined(MBEDTLS_SSL_TLS_C)
 #include "mbedtls/ssl.h"

@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-#if MBED_CONF_CELLULAR_USE_SMS
-
 #include "UBLOX_N2XX_CellularSMS.h"
 
 using namespace mbed;
@@ -49,5 +47,3 @@ nsapi_error_t UBLOX_N2XX_CellularSMS::delete_all_messages()
 {
     return NSAPI_ERROR_UNSUPPORTED;
 }
-
-#endif // MBED_CONF_CELLULAR_USE_SMS

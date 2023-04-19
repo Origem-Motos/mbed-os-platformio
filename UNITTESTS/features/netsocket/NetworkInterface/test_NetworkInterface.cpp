@@ -75,28 +75,22 @@ TEST_F(TestNetworkInterface, get_mac_address)
     EXPECT_EQ(iface->get_mac_address(), n);
 }
 
-TEST_F(TestNetworkInterface, set_mac_address)
-{
-    uint8_t mac_buf[8];
-    EXPECT_EQ(iface->set_mac_address(mac_buf, 8), NSAPI_ERROR_UNSUPPORTED);
-}
-
 TEST_F(TestNetworkInterface, get_ip_address)
 {
-    SocketAddress addr;
-    EXPECT_EQ(iface->get_ip_address(&addr), NSAPI_ERROR_UNSUPPORTED);
+    char *n = 0;
+    EXPECT_EQ(iface->get_ip_address(), n);
 }
 
 TEST_F(TestNetworkInterface, get_netmask)
 {
-    SocketAddress addr;
-    EXPECT_EQ(iface->get_netmask(&addr), NSAPI_ERROR_UNSUPPORTED);
+    char *n = 0;
+    EXPECT_EQ(iface->get_netmask(), n);
 }
 
 TEST_F(TestNetworkInterface, get_gateway)
 {
-    SocketAddress addr;
-    EXPECT_EQ(iface->get_gateway(&addr), NSAPI_ERROR_UNSUPPORTED);
+    char *n = 0;
+    EXPECT_EQ(iface->get_gateway(), n);
 }
 
 TEST_F(TestNetworkInterface, get_interface_name)

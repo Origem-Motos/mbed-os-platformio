@@ -54,77 +54,6 @@
  * between is unreliable */
 #define LP_TIMER_SAFE_GUARD 5
 
-
-#if defined(DUAL_CORE)
-#if defined(CORE_CM7)
-#define LPTIM_MST_BASE            LPTIM4_BASE
-#define LPTIM_MST                 ((LPTIM_TypeDef *)LPTIM_MST_BASE)
-
-#define RCC_PERIPHCLK_LPTIM       RCC_PERIPHCLK_LPTIM4
-#define RCC_LPTIMCLKSOURCE_LSE    RCC_LPTIM4CLKSOURCE_LSE
-#define RCC_LPTIMCLKSOURCE_LSI    RCC_LPTIM4CLKSOURCE_LSI
-
-#define LPTIM_MST_IRQ             LPTIM4_IRQn
-#define LPTIM_MST_RCC             __HAL_RCC_LPTIM4_CLK_ENABLE
-
-#define LPTIM_MST_RCC_CLKAM                  __HAL_RCC_LPTIM4_CLKAM_ENABLE
-
-/* Enable LPTIM wakeup source but only for current core, and disable it for the other core */
-#define LPTIM_MST_EXTI_LPTIM_WAKEUP_CONFIG()  {\
-                                                 HAL_EXTI_D1_EventInputConfig(EXTI_LINE52, EXTI_MODE_IT, ENABLE);\
-                                                 HAL_EXTI_D2_EventInputConfig(EXTI_LINE52, EXTI_MODE_IT, DISABLE);\
-                                               }
-#define LPTIM_MST_RESET_ON        __HAL_RCC_LPTIM4_FORCE_RESET
-#define LPTIM_MST_RESET_OFF       __HAL_RCC_LPTIM4_RELEASE_RESET
-
-//#define LPTIM_MST_BIT_WIDTH  32 // 16 or 32
-
-//#define LPTIM_MST_PCLK  1 // Select the peripheral clock number (1 or 2)
-
-#elif defined(CORE_CM4)
-#define LPTIM_MST_BASE            LPTIM5_BASE
-#define LPTIM_MST                 ((LPTIM_TypeDef *)LPTIM_MST_BASE)
-
-#define RCC_PERIPHCLK_LPTIM       RCC_PERIPHCLK_LPTIM5
-#define RCC_LPTIMCLKSOURCE_LSE    RCC_LPTIM5CLKSOURCE_LSE
-#define RCC_LPTIMCLKSOURCE_LSI    RCC_LPTIM5CLKSOURCE_LSI
-
-#define LPTIM_MST_IRQ             LPTIM5_IRQn
-#define LPTIM_MST_RCC             __HAL_RCC_LPTIM5_CLK_ENABLE
-
-#define LPTIM_MST_RCC_CLKAM       __HAL_RCC_LPTIM5_CLKAM_ENABLE
-
-/* Enable LPTIM wakeup source but only for current core, and disable it for the other core */
-#define LPTIM_MST_EXTI_LPTIM_WAKEUP_CONFIG()  {\
-                                                 HAL_EXTI_D2_EventInputConfig(EXTI_LINE53, EXTI_MODE_IT, ENABLE);\
-                                                 HAL_EXTI_D1_EventInputConfig(EXTI_LINE53, EXTI_MODE_IT, DISABLE);\
-                                               }
-#define LPTIM_MST_RESET_ON        __HAL_RCC_LPTIM5_FORCE_RESET
-#define LPTIM_MST_RESET_OFF       __HAL_RCC_LPTIM5_RELEASE_RESET
-#else
-#error "Core not supported"
-#endif
-#else
-#define LPTIM_MST_BASE            LPTIM1_BASE
-#define LPTIM_MST                 ((LPTIM_TypeDef *)LPTIM_MST_BASE)
-
-#define RCC_PERIPHCLK_LPTIM       RCC_PERIPHCLK_LPTIM1
-#define RCC_LPTIMCLKSOURCE_LSE    RCC_LPTIM1CLKSOURCE_LSE
-#define RCC_LPTIMCLKSOURCE_LSI    RCC_LPTIM1CLKSOURCE_LSI
-
-#if defined(STM32G0)
-#define LPTIM_MST_IRQ             TIM6_DAC_LPTIM1_IRQn
-#else
-#define LPTIM_MST_IRQ             LPTIM1_IRQn
-#endif
-#define LPTIM_MST_RCC             __HAL_RCC_LPTIM1_CLK_ENABLE
-
-#define LPTIM_MST_RESET_ON        __HAL_RCC_LPTIM1_FORCE_RESET
-#define LPTIM_MST_RESET_OFF       __HAL_RCC_LPTIM1_RELEASE_RESET
-#endif
-
-
-
 LPTIM_HandleTypeDef LptimHandle;
 
 const ticker_info_t *lp_ticker_get_info()
@@ -152,7 +81,7 @@ volatile timestamp_t lp_delayed_counter = 0;
 volatile bool sleep_manager_locked = false;
 
 static int LPTICKER_inited = 0;
-static void LPTIM_IRQHandler(void);
+static void LPTIM1_IRQHandler(void);
 
 void lp_ticker_init(void)
 {
@@ -174,16 +103,13 @@ void lp_ticker_init(void)
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
 
     /* Select the LSE clock as LPTIM peripheral clock */
-    RCC_PeriphCLKInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LPTIM;
+    RCC_PeriphCLKInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LPTIM1;
 #if (TARGET_STM32L0)
-    RCC_PeriphCLKInitStruct.LptimClockSelection = RCC_LPTIMCLKSOURCE_LSE;
+    RCC_PeriphCLKInitStruct.LptimClockSelection = RCC_LPTIM1CLKSOURCE_LSE;
 #else
-#if (LPTIM_MST_BASE == LPTIM1_BASE)
-    RCC_PeriphCLKInitStruct.Lptim1ClockSelection = RCC_LPTIMCLKSOURCE_LSE;
-#elif (LPTIM_MST_BASE == LPTIM3_BASE) || (LPTIM_MST_BASE == LPTIM4_BASE) || (LPTIM_MST_BASE == LPTIM5_BASE)
-    RCC_PeriphCLKInitStruct.Lptim345ClockSelection = RCC_LPTIMCLKSOURCE_LSE;
-#endif /* LPTIM_MST_BASE == LPTIM1 */
-#endif /* TARGET_STM32L0 */
+    RCC_PeriphCLKInitStruct.Lptim1ClockSelection = RCC_LPTIM1CLKSOURCE_LSE;
+#endif
+
 #else /* MBED_CONF_TARGET_LSE_AVAILABLE */
 
     /* Enable LSI clock */
@@ -196,22 +122,15 @@ void lp_ticker_init(void)
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
 
     /* Select the LSI clock as LPTIM peripheral clock */
-    RCC_PeriphCLKInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LPTIM;
+    RCC_PeriphCLKInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LPTIM1;
 #if (TARGET_STM32L0)
-    RCC_PeriphCLKInitStruct.LptimClockSelection = RCC_LPTIMCLKSOURCE_LSI;
+    RCC_PeriphCLKInitStruct.LptimClockSelection = RCC_LPTIM1CLKSOURCE_LSI;
 #else
-#if (LPTIM_MST_BASE == LPTIM1_BASE)
-    RCC_PeriphCLKInitStruct.Lptim1ClockSelection = RCC_LPTIMCLKSOURCE_LSI;
-#elif (LPTIM_MST_BASE == LPTIM3_BASE) || (LPTIM_MST_BASE == LPTIM4_BASE) || (LPTIM_MST_BASE == LPTIM5_BASE)
-    RCC_PeriphCLKInitStruct.Lptim345ClockSelection = RCC_LPTIMCLKSOURCE_LSI;
-#endif /* LPTIM_MST_BASE == LPTIM1 */
-#endif /* TARGET_STM32L0 */
+    RCC_PeriphCLKInitStruct.Lptim1ClockSelection = RCC_LPTIM1CLKSOURCE_LSI;
+#endif
 
 #endif /* MBED_CONF_TARGET_LSE_AVAILABLE */
-#if defined(DUAL_CORE)
-    while (LL_HSEM_1StepLock(HSEM, CFG_HW_RCC_SEMID)) {
-    }
-#endif /* DUAL_CORE */
+
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
         error("HAL_RCC_OscConfig ERROR\n");
         return;
@@ -222,19 +141,12 @@ void lp_ticker_init(void)
         return;
     }
 
-    LPTIM_MST_RCC();
-    LPTIM_MST_RESET_ON();
-    LPTIM_MST_RESET_OFF();
-#if defined(DUAL_CORE)
-    /* Configure EXTI wakeup and configure autonomous mode */
-    LPTIM_MST_RCC_CLKAM();
-    LPTIM_MST_EXTI_LPTIM_WAKEUP_CONFIG();
-
-    LL_HSEM_ReleaseLock(HSEM, CFG_HW_RCC_SEMID, HSEM_CR_COREID_CURRENT);
-#endif /* DUAL_CORE */
+    __HAL_RCC_LPTIM1_CLK_ENABLE();
+    __HAL_RCC_LPTIM1_FORCE_RESET();
+    __HAL_RCC_LPTIM1_RELEASE_RESET();
 
     /* Initialize the LPTIM peripheral */
-    LptimHandle.Instance = LPTIM_MST;
+    LptimHandle.Instance = LPTIM1;
     LptimHandle.State = HAL_LPTIM_STATE_RESET;
     LptimHandle.Init.Clock.Source = LPTIM_CLOCKSOURCE_APBCLOCK_LPOSC;
 #if defined(MBED_CONF_TARGET_LPTICKER_LPTIM_CLOCK)
@@ -257,27 +169,20 @@ void lp_ticker_init(void)
     LptimHandle.Init.Trigger.SampleTime = LPTIM_TRIGSAMPLETIME_DIRECTTRANSITION;
 #endif
 
-    LptimHandle.Init.UltraLowPowerClock.SampleTime = LPTIM_TRIGSAMPLETIME_DIRECTTRANSITION; // L5 ?
-
     LptimHandle.Init.OutputPolarity = LPTIM_OUTPUTPOLARITY_HIGH;
     LptimHandle.Init.UpdateMode = LPTIM_UPDATE_IMMEDIATE;
     LptimHandle.Init.CounterSource = LPTIM_COUNTERSOURCE_INTERNAL;
-#if defined (LPTIM_INPUT1SOURCE_GPIO) /* STM32L4 / STM32L5 */
+#if defined (LPTIM_INPUT1SOURCE_GPIO) /* STM32L4 */
     LptimHandle.Init.Input1Source = LPTIM_INPUT1SOURCE_GPIO;
     LptimHandle.Init.Input2Source = LPTIM_INPUT2SOURCE_GPIO;
 #endif /* LPTIM_INPUT1SOURCE_GPIO */
-
-#if defined(LPTIM_RCR_REP) /* STM32L4 / STM32L5 */
-    LptimHandle.Init.RepetitionCounter = 0;
-#endif /* LPTIM_RCR_REP */
-
 
     if (HAL_LPTIM_Init(&LptimHandle) != HAL_OK) {
         error("HAL_LPTIM_Init ERROR\n");
         return;
     }
 
-    NVIC_SetVector(LPTIM_MST_IRQ, (uint32_t)LPTIM_IRQHandler);
+    NVIC_SetVector(LPTIM1_IRQn, (uint32_t)LPTIM1_IRQHandler);
 
 #if defined (__HAL_LPTIM_WAKEUPTIMER_EXTI_ENABLE_IT)
     /* EXTI lines are not configured by default */
@@ -303,7 +208,7 @@ void lp_ticker_init(void)
     lp_cmpok = true;
 }
 
-static void LPTIM_IRQHandler(void)
+static void LPTIM1_IRQHandler(void)
 {
     core_util_critical_section_enter();
 
@@ -370,11 +275,11 @@ static void LPTIM_IRQHandler(void)
 
 uint32_t lp_ticker_read(void)
 {
-    uint32_t lp_time = LPTIM_MST->CNT;
+    uint32_t lp_time = LPTIM1->CNT;
     /* Reading the LPTIM_CNT register may return unreliable values.
     It is necessary to perform two consecutive read accesses and verify that the two returned values are identical */
-    while (lp_time != LPTIM_MST->CNT) {
-        lp_time = LPTIM_MST->CNT;
+    while (lp_time != LPTIM1->CNT) {
+        lp_time = LPTIM1->CNT;
     }
     return lp_time;
 }
@@ -388,7 +293,7 @@ void lp_ticker_set_interrupt(timestamp_t timestamp)
 
     /* Always store the last requested timestamp */
     lp_delayed_counter = timestamp;
-    NVIC_EnableIRQ(LPTIM_MST_IRQ);
+    NVIC_EnableIRQ(LPTIM1_IRQn);
 
     /* CMPOK is set by hardware to inform application that the APB bus write operation to the
      * LPTIM_CMP register has been successfully completed.
@@ -472,8 +377,8 @@ void lp_ticker_fire_interrupt(void)
     lp_Fired = 1;
     /* In case we fire interrupt now, then cancel pending programing */
     lp_delayed_prog = false;
-    NVIC_SetPendingIRQ(LPTIM_MST_IRQ);
-    NVIC_EnableIRQ(LPTIM_MST_IRQ);
+    NVIC_SetPendingIRQ(LPTIM1_IRQn);
+    NVIC_EnableIRQ(LPTIM1_IRQn);
     core_util_critical_section_exit();
 }
 
@@ -494,8 +399,8 @@ void lp_ticker_disable_interrupt(void)
     }
     lp_delayed_prog = false;
     lp_Fired = 0;
-    NVIC_DisableIRQ(LPTIM_MST_IRQ);
-    NVIC_ClearPendingIRQ(LPTIM_MST_IRQ);
+    NVIC_DisableIRQ(LPTIM1_IRQn);
+    NVIC_ClearPendingIRQ(LPTIM1_IRQn);
 
     core_util_critical_section_exit();
 }
@@ -504,7 +409,7 @@ void lp_ticker_clear_interrupt(void)
 {
     core_util_critical_section_enter();
     __HAL_LPTIM_CLEAR_FLAG(&LptimHandle, LPTIM_FLAG_CMPM);
-    NVIC_ClearPendingIRQ(LPTIM_MST_IRQ);
+    NVIC_ClearPendingIRQ(LPTIM1_IRQn);
     core_util_critical_section_exit();
 }
 

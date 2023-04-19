@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021, Pelion and affiliates.
+ * Copyright (c) 2018-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,6 @@
 #include "mac_api.h"
 #include "mac_mcps.h"
 #include "Common_Protocols/ipv6_constants.h"
-#include "Common_Protocols/ip.h"
 #include "socket_api.h"
 #include "6LoWPAN/MAC/mac_helper.h"
 #include "6LoWPAN/MAC/mpx_api.h"
@@ -81,8 +80,6 @@ int8_t ws_eapol_auth_relay_start(protocol_interface_info_entry_t *interface_ptr,
         ns_dyn_mem_free(eapol_auth_relay);
         return -1;
     }
-    int16_t tc = IP_DSCP_CS6 << IP_TCLASS_DSCP_SHIFT;
-    socket_setsockopt(eapol_auth_relay->socket_id, SOCKET_IPPROTO_IPV6, SOCKET_IPV6_TCLASS, &tc, sizeof(tc));
 
     ns_list_add_to_end(&eapol_auth_relay_list, eapol_auth_relay);
 
@@ -165,13 +162,6 @@ static void ws_eapol_auth_relay_socket_cb(void *cb)
         eui_64 = ptr;
         ptr += 8;
         uint16_t data_len = cb_data->d_len - 26;
-        /* If EAPOL PDU data length is zero (message contains only supplicant EUI-64 and KMP ID)
-         * i.e. is purge message and is not going to authenticator local relay then ignores message
-         */
-        if (data_len == 1 && !addr_ipv6_equal(relay_ip_addr.address, eapol_auth_relay->relay_addr.address)) {
-            ns_dyn_mem_free(socket_pdu);
-            return;
-        }
         ws_eapol_relay_lib_send_to_relay(eapol_auth_relay->socket_id, eui_64, &relay_ip_addr,
                                          ptr, data_len);
         ns_dyn_mem_free(socket_pdu);

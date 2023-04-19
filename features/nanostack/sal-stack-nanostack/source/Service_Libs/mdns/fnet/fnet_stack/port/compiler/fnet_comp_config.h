@@ -1,7 +1,6 @@
 /**************************************************************************
 *
-* Copyright (c) 2019, Pelion and affiliates.
-* SPDX-License-Identifier: Apache-2.0
+* Copyright (c) 2019 Arm Limited and affiliates.
 * Copyright 2011-2016 by Andrey Butok. FNET Community.
 * Copyright 2008-2010 by Andrey Butok. Freescale Semiconductor, Inc.
 *
@@ -95,6 +94,10 @@
     #elif defined(__clang__)
         #define FNET_CFG_COMP_CLANG (1)
         #define FNET_COMP_STR       "CLANG"
+        /* Keil uVision compiler using armcc. */
+    #elif defined(__CC_ARM)
+        #define FNET_CFG_COMP_UV    (1)
+        #define FNET_COMP_STR       "UV"
         /* GNU GCC */
     #elif defined(__GNUC__)
         #define FNET_CFG_COMP_GNUC  (1)

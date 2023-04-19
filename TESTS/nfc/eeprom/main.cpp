@@ -15,10 +15,6 @@
  * limitations under the License.
  */
 
-#if !MBED_CONF_NFCEEPROM
-#error [NOT_SUPPORTED] NFC EEPROM not supported for this target
-#else
-
 #include "mbed.h"
 #include "greentea-client/test_env.h"
 #include "unity.h"
@@ -26,6 +22,10 @@
 
 #include <events/mbed_events.h>
 #include "NFCEEPROMDriver.h"
+
+#if !MBED_CONF_NFCEEPROM
+#error [NOT_SUPPORTED] NFC EEPROM not supported for this target
+#else
 
 using namespace utest::v1;
 using namespace mbed::nfc;

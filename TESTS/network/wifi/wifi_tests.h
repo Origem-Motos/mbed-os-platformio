@@ -48,6 +48,9 @@ void wifi_get_rssi(void);
 /** Test WiFiInterface::connect(ssid, pass, security, channel) with NULL parameters */
 void wifi_connect_params_null(void);
 
+/** Test WiFiInterface::connect(ssid, pass, security) with valid parameters for unsecure network */
+void wifi_connect_params_valid_unsecure(void);
+
 /** Test WiFiInterface::connect(ssid, pass, security) with valid parameters for secure network */
 void wifi_connect_params_valid_secure(void);
 
@@ -60,8 +63,8 @@ void wifi_connect_params_channel_fail(void);
 /** Test WiFiInterface::connect() without parameters. Use set_credentials() for setting parameters. */
 void wifi_connect(void);
 
-/** Test WiFiInterface::connect() and disconnect() in nonblocking mode. Use set_credentials() for setting parameters. */
-void wifi_connect_disconnect_nonblock(void);
+/** Test WiFiInterface::connect() in nonblocking mode. Use set_credentials() for setting parameters. */
+void wifi_connect_nonblock(void);
 
 /** Test WiFiInterface::connect() without parameters. Don't set parameters with set_credentials() */
 void wifi_connect_nocredentials(void);

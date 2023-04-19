@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-#if defined(MBED_CONF_RTOS_PRESENT)
 #include "mbed.h"
 #include "TCPSocket.h"
 #include "greentea-client/test_env.h"
@@ -70,7 +69,7 @@ static void check_const_len_rand_sequence()
                 }
                 continue;
             } else if (sent < 0) {
-                tr_error("network error %d", sent);
+                printf("network error %d\n", sent);
                 TEST_FAIL();
                 goto END;
             }
@@ -83,7 +82,7 @@ static void check_const_len_rand_sequence()
             if (recvd == NSAPI_ERROR_WOULD_BLOCK) {
                 continue;
             } else if (recvd < 0) {
-                tr_error("network error %d", recvd);
+                printf("network error %d\n", recvd);
                 TEST_FAIL();
                 goto END;
             }
@@ -127,7 +126,7 @@ static void check_var_len_rand_sequence()
                 }
                 continue;
             } else if (sent < 0) {
-                tr_error("[%02d] network error %d", i, sent);
+                printf("[%02d] network error %d\n", i, sent);
                 TEST_FAIL();
                 goto END;
             }
@@ -140,7 +139,7 @@ static void check_var_len_rand_sequence()
             if (recvd == NSAPI_ERROR_WOULD_BLOCK) {
                 continue;
             } else if (recvd < 0) {
-                tr_error("[%02d] network error %d", i, recvd);
+                printf("[%02d] network error %d\n", i, recvd);
                 TEST_FAIL();
                 goto END;
             }
@@ -168,4 +167,3 @@ void TCPSOCKET_THREAD_PER_SOCKET_SAFETY()
     running = false;
     thread.join();
 }
-#endif // defined(MBED_CONF_RTOS_PRESENT)

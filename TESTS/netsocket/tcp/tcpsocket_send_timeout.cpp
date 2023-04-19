@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-#if defined(MBED_CONF_RTOS_PRESENT)
 #include "mbed.h"
 #include "TCPSocket.h"
 #include "greentea-client/test_env.h"
@@ -33,7 +32,6 @@ void TCPSOCKET_SEND_TIMEOUT()
         TEST_FAIL();
         return;
     }
-    sock.set_blocking(false);
 
     int err;
     Timer timer;
@@ -43,15 +41,14 @@ void TCPSOCKET_SEND_TIMEOUT()
         timer.start();
         err = sock.send(tx_buffer, sizeof(tx_buffer));
         timer.stop();
-        if ((err == sizeof(tx_buffer) || err == NSAPI_ERROR_WOULD_BLOCK) &&
+        if ((err == sizeof(tx_buffer)) &&
                 (timer.read_ms() <= 800)) {
             continue;
         }
-        tr_error("send: err %d, time %d", err, timer.read_ms());
+        printf("send: err %d, time %d", err, timer.read_ms());
         TEST_FAIL();
         break;
     }
 
     TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, sock.close());
 }
-#endif // defined(MBED_CONF_RTOS_PRESENT)

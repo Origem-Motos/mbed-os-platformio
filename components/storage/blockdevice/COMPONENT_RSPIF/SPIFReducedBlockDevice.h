@@ -16,9 +16,9 @@
 #ifndef MBED_RSPIF_BLOCK_DEVICE_H
 #define MBED_RSPIF_BLOCK_DEVICE_H
 
-#include "drivers/SPI.h"
-#include "drivers/DigitalOut.h"
-#include "features/storage/blockdevice/BlockDevice.h"
+#include "SPI.h"
+#include "DigitalOut.h"
+#include "BlockDevice.h"
 
 /** Reduced BlockDevice for SPI based flash devices
  *  *Should only be used by Boot Loader*

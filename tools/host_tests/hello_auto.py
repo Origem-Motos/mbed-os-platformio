@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-class HelloTest(object):
+class HelloTest():
     HELLO_WORLD = "Hello World"
 
     def test(self, selftest):

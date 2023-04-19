@@ -15,9 +15,6 @@
  * limitations under the License.
  */
 
-#ifndef __MBED_RTC_TIME_H__
-#define __MBED_RTC_TIME_H__
-
 #include <time.h>
 
 #ifdef __cplusplus
@@ -132,5 +129,3 @@ int settimeofday(const struct timeval *tv, const struct timezone *tz);
 
 /** @}*/
 /** @}*/
-
-#endif /* __MBED_RTC_TIME_H__ */

@@ -1,4 +1,5 @@
-/* Copyright (c) 2019 ARM Limited
+/*
+ * Copyright (c) , Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,23 +15,4 @@
  * limitations under the License.
  */
 
-#ifndef SEMAPHORE_H
-#define SEMAPHORE_H
-
-#include <stdint.h>
-#include "cmsis_os2.h"
-
-namespace rtos {
-class Semaphore  {
-public:
-    Semaphore(int32_t count = 0) {};
-    Semaphore(int32_t count, uint16_t max_count) {};
-    void acquire() {};
-    bool try_acquire() { return false; };
-    bool try_acquire_for(uint32_t millisec) { return false; };
-    bool try_acquire_until(uint64_t millisec) { return false; };
-    osStatus release(void) {return 0;};
-};
-}
-
-#endif
+typedef void *Semaphore;

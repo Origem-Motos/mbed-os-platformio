@@ -17,8 +17,8 @@
   *                                  by the user application to setup the SysTick
   *                                  timer or configure other parameters.
   *
-  *      - SystemCoreClockUpdate(): Updates the variables SystemD1Clock and SystemD2Clock
-  *                                 and must be called whenever the core clock is changed
+  *      - SystemCoreClockUpdate(): Updates the variable SystemCoreClock and must
+  *                                 be called whenever the core clock is changed
   *                                 during program execution.
   *
   *
@@ -50,7 +50,6 @@
 
 #include "stm32h7xx.h"
 #include <math.h>
-#include "nvic_addr.h" // MBED PATCH for Bootloader
 
 #if !defined  (HSE_VALUE)
 #define HSE_VALUE    ((uint32_t)25000000) /*!< Value of the External oscillator in Hz */
@@ -112,14 +111,7 @@
                is no need to call the 2 first functions listed above, since SystemCoreClock
                variable is updated automatically.
   */
-#if defined(CORE_CM7)
-#define SystemCoreClock   SystemD1Clock
-#elif defined(CORE_CM4)
-#define SystemCoreClock   SystemD2Clock
-#else
-#error "Wrong core selection"
-#endif
-  uint32_t SystemD1Clock = 64000000;
+  uint32_t SystemCoreClock = 64000000;
   uint32_t SystemD2Clock = 64000000;
   const  uint8_t D1CorePrescTable[16] = {0, 0, 0, 0, 1, 2, 3, 4, 1, 2, 3, 4, 6, 7, 8, 9};
 
@@ -224,7 +216,7 @@ void SystemInit (void)
 #ifdef VECT_TAB_SRAM
   SCB->VTOR = D2_AHBSRAM_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal SRAM */
 #else
-  SCB->VTOR = NVIC_FLASH_VECTOR_ADDRESS; /* Vector Table Relocation in Internal FLASH */ // MBED PATCH for Bootloader
+  SCB->VTOR = FLASH_BANK2_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal FLASH */
 #endif
 
 #else
@@ -234,7 +226,7 @@ void SystemInit (void)
 #ifdef VECT_TAB_SRAM
   SCB->VTOR = D1_AXISRAM_BASE  | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal D1 AXI-RAM */
 #else
-  SCB->VTOR = NVIC_FLASH_VECTOR_ADDRESS; /* Vector Table Relocation in Internal FLASH */ // MBED PATCH for Bootloader
+  SCB->VTOR = FLASH_BANK1_BASE | VECT_TAB_OFFSET;       /* Vector Table Relocation in Internal FLASH */
 #endif
 
 #else
@@ -245,7 +237,7 @@ void SystemInit (void)
 }
 
 /**
-   * @brief  Update SystemD1Clock and SystemD2Clock variables according to Clock Register Values.
+   * @brief  Update SystemCoreClock variable according to Clock Register Values.
   *         The SystemCoreClock variable contains the core clock , it can
   *         be used by the user application to setup the SysTick timer or configure
   *         other parameters.
@@ -258,10 +250,10 @@ void SystemInit (void)
   *           frequency in the chip. It is calculated based on the predefined
   *           constant and the selected clock source:
   *
-  *           - If SYSCLK source is CSI, SystemD1Clock will contain the CSI_VALUE(*)
-  *           - If SYSCLK source is HSI, SystemD1Clock will contain the HSI_VALUE(**)
-  *           - If SYSCLK source is HSE, SystemD1Clock will contain the HSE_VALUE(***)
-  *           - If SYSCLK source is PLL, SystemD1Clock will contain the CSI_VALUE(*),
+  *           - If SYSCLK source is CSI, SystemCoreClock will contain the CSI_VALUE(*)
+  *           - If SYSCLK source is HSI, SystemCoreClock will contain the HSI_VALUE(**)
+  *           - If SYSCLK source is HSE, SystemCoreClock will contain the HSE_VALUE(***)
+  *           - If SYSCLK source is PLL, SystemCoreClock will contain the CSI_VALUE(*),
   *             HSI_VALUE(**) or HSE_VALUE(***) multiplied/divided by the PLL factors.
   *
   *         (*) CSI_VALUE is a constant defined in stm32h7xx_hal.h file (default value
@@ -291,16 +283,16 @@ void SystemCoreClockUpdate (void)
   switch (RCC->CFGR & RCC_CFGR_SWS)
   {
   case RCC_CFGR_SWS_HSI:  /* HSI used as system clock source */
-   SystemD1Clock = (uint32_t) (HSI_VALUE >> ((RCC->CR & RCC_CR_HSIDIV)>> 3));
+   SystemCoreClock = (uint32_t) (HSI_VALUE >> ((RCC->CR & RCC_CR_HSIDIV)>> 3));
 
     break;
 
   case RCC_CFGR_SWS_CSI:  /* CSI used as system clock  source */
-    SystemD1Clock = CSI_VALUE;
+    SystemCoreClock = CSI_VALUE;
     break;
 
   case RCC_CFGR_SWS_HSE:  /* HSE used as system clock  source */
-    SystemD1Clock = HSE_VALUE;
+    SystemCoreClock = HSE_VALUE;
     break;
 
   case RCC_CFGR_SWS_PLL1:  /* PLL1 used as system clock  source */
@@ -337,27 +329,27 @@ void SystemCoreClockUpdate (void)
         break;
       }
       pllp = (((RCC->PLL1DIVR & RCC_PLL1DIVR_P1) >>9) + 1U ) ;
-      SystemD1Clock =  (uint32_t)(float_t)(pllvco/(float_t)pllp);
+      SystemCoreClock =  (uint32_t)(float_t)(pllvco/(float_t)pllp);
     }
     else
     {
-      SystemD1Clock = 0U;
+      SystemCoreClock = 0U;
     }
     break;
 
   default:
-    SystemD1Clock = CSI_VALUE;
+    SystemCoreClock = CSI_VALUE;
     break;
   }
 
   /* Compute SystemClock frequency --------------------------------------------------*/
   tmp = D1CorePrescTable[(RCC->D1CFGR & RCC_D1CFGR_D1CPRE)>> RCC_D1CFGR_D1CPRE_Pos];
 
-  /* SystemD1Clock frequency : CM7 CPU frequency  */
-  SystemD1Clock >>= tmp;
+  /* SystemCoreClock frequency : CM7 CPU frequency  */
+  SystemCoreClock >>= tmp;
 
   /* SystemD2Clock frequency : CM4 CPU, AXI and AHBs Clock frequency  */
-  SystemD2Clock = (SystemD1Clock >> ((D1CorePrescTable[(RCC->D1CFGR & RCC_D1CFGR_HPRE)>> RCC_D1CFGR_HPRE_Pos]) & 0x1FU));
+  SystemD2Clock = (SystemCoreClock >> ((D1CorePrescTable[(RCC->D1CFGR & RCC_D1CFGR_HPRE)>> RCC_D1CFGR_HPRE_Pos]) & 0x1FU));
 
 }
 

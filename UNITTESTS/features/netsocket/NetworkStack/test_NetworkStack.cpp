@@ -144,8 +144,7 @@ TEST_F(TestNetworkStack, constructor)
 
 TEST_F(TestNetworkStack, get_ip_address_default)
 {
-    SocketAddress a;
-    EXPECT_EQ(stack->NetworkStack::get_ip_address(&a), NSAPI_ERROR_UNSUPPORTED);
+    EXPECT_EQ(stack->NetworkStack::get_ip_address(), (char *)NULL);
 }
 
 /* gethostbyname */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2021, Pelion and affiliates.
+ * Copyright (c) 2016-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,8 +35,6 @@ struct arm_phy_sap_msg_s;
 struct mcps_purge_s;
 struct mcps_data_req_ie_list;
 struct channel_list_s;
-struct mcps_enhanced_frame_response_s;
-struct mac_pre_parsed_frame_s;
 
 /** Address types */
 typedef enum {
@@ -48,9 +46,7 @@ typedef enum {
 
 #define MAC_PD_DATA_NORMAL_PRIORITY 0    //Normal MCPS DATA REQ
 #define MAC_PD_DATA_MEDIUM_PRIORITY 1    //Indirect Data which is polled
-#define MAC_PD_DATA_HIGH_PRIORITY   2    //Beacon request Beacon response
-#define MAC_PD_DATA_EF_PRIORITY     3    //Expedited forwarding
-#define MAC_PD_DATA_TX_IMMEDIATELY  4    //Only for packets whose transmission was interrupted by wrong channel type. E.g. unicast on broadcast channel.
+#define MAC_PD_DATA_HIGH_PRIOTITY   2    //Beacon request Beacon response
 
 #define MCPS_SAP_DATA_IND_EVENT         1
 #define MCPS_SAP_DATA_CNF_EVENT         2
@@ -60,7 +56,6 @@ typedef enum {
 #define MAC_MLME_SCAN_CONFIRM_HANDLER   6
 #define MAC_SAP_TRIG_TX                 7
 #define MCPS_SAP_DATA_ACK_CNF_EVENT     8
-#define MAC_CCA_THR_UPDATE              9
 
 // Default number of CSMA-CA periods
 #define MAC_DEFAULT_NUMBER_OF_CSMA_PERIODS  1
@@ -103,8 +98,6 @@ void mcps_sap_pd_req_queue_write(struct protocol_interface_rf_mac_setup *rf_mac_
  */
 mac_pre_parsed_frame_t *mcps_sap_pre_parsed_frame_buffer_get(const uint8_t *data_ptr, uint16_t frame_length);
 
-mac_pre_parsed_frame_t *mcps_sap_pre_parsed_ack_buffer_get(struct protocol_interface_rf_mac_setup *rf_ptr, const uint8_t *data_ptr, uint16_t frame_length);
-
 /**
  * Forward Buffer for MAC MCPS SAP layer event handler
  */
@@ -117,13 +110,13 @@ int8_t mcps_sap_pd_confirm(void *mac_ptr);
 
 int8_t mcps_sap_pd_confirm_failure(void *mac_ptr);
 
-int8_t mcps_sap_pd_ack(struct protocol_interface_rf_mac_setup *rf_ptr, struct mac_pre_parsed_frame_s *buffer);
+void mcps_sap_pd_ack(void *ack_ptr);
 
 int8_t mac_virtual_sap_data_cb(void *identifier, struct arm_phy_sap_msg_s *message);
 
 void mcps_sap_data_req_handler(struct protocol_interface_rf_mac_setup *rf_mac_setup, const struct mcps_data_req_s *data_req);
 
-void mcps_sap_data_req_handler_ext(struct protocol_interface_rf_mac_setup *rf_mac_setup, const struct mcps_data_req_s *data_req, const struct mcps_data_req_ie_list *ie_list, const channel_list_s *asynch_channel_list, mac_data_priority_t priority, uint8_t phy_mode_id);
+void mcps_sap_data_req_handler_ext(struct protocol_interface_rf_mac_setup *rf_mac_setup, const struct mcps_data_req_s *data_req, const struct mcps_data_req_ie_list *ie_list, const channel_list_s *asynch_channel_list);
 
 void mac_mcps_trig_buffer_from_queue(struct protocol_interface_rf_mac_setup *rf_mac_setup);
 
@@ -139,11 +132,7 @@ uint8_t mcps_sap_purge_reg_handler(struct protocol_interface_rf_mac_setup *rf_ma
 
 int8_t mcps_pd_data_rebuild(struct protocol_interface_rf_mac_setup *rf_ptr, mac_pre_build_frame_t *buffer);
 
-int8_t mcps_edfe_data_request(struct protocol_interface_rf_mac_setup *rf_ptr, mac_pre_build_frame_t *buffer);
-
 int8_t mcps_generic_ack_data_request_init(struct protocol_interface_rf_mac_setup *rf_ptr, const mac_fcf_sequence_t *fcf, const uint8_t *data_ptr, const mcps_ack_data_payload_t *ack_payload);
-
-int8_t mcps_generic_edfe_frame_init(struct protocol_interface_rf_mac_setup *rf_ptr, const mac_fcf_sequence_t *fcf, const uint8_t *data_ptr, const struct mcps_edfe_response_s *response);
 
 int8_t mcps_generic_ack_build(struct protocol_interface_rf_mac_setup *rf_ptr, bool init_build);
 
@@ -152,7 +141,5 @@ int mcps_packet_ingress_rate_limit_by_memory(uint8_t free_heap_percentage);
 uint32_t mac_mcps_sap_get_phy_timestamp(struct protocol_interface_rf_mac_setup *rf_mac_setup);
 
 void mcps_pending_packet_counter_update_check(struct protocol_interface_rf_mac_setup *rf_mac_setup, mac_pre_build_frame_t *buffer);
-
-void mac_cca_threshold_event_send(struct protocol_interface_rf_mac_setup *rf_mac_setup, uint8_t channel, int16_t dbm);
 
 #endif /* MAC_IEEE802_15_4_MAC_MCPS_SAP_H_ */

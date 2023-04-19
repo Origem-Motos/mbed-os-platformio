@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020, Pelion and affiliates.
+ * Copyright (c) 2016-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,7 +54,7 @@ typedef struct {
 typedef NS_LIST_HEAD(cert_chain_entry_t, link) cert_chain_list_t;
 typedef NS_LIST_HEAD(cert_revocat_list_entry_t, link) cert_revocat_lists_t;
 
-typedef struct sec_prot_certs_s {
+typedef struct {
     cert_chain_entry_t own_cert_chain;                  /**< Own certificate chain */
     cert_chain_list_t trusted_cert_chain_list;          /**< Trusted certificate chain lists */
     cert_revocat_lists_t cert_revocat_lists;            /**< Certificate Revocation Lists */

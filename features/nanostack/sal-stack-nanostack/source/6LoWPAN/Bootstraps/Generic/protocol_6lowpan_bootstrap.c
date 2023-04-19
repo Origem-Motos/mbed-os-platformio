@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2021, Pelion and affiliates.
+ * Copyright (c) 2015-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -588,7 +588,7 @@ static void mle_neigh_entry_update_by_mle_tlv_list(int8_t interface_id, mac_neig
             uint8_t link_idr;
             uint8_t iop_flags;
             if (mle_link_quality_tlv_parse(mac64, short_address, mle_tlv_info.dataPtr, mle_tlv_info.tlvLen, &iop_flags, &link_idr)) {
-                etx_remote_incoming_idr_update(interface_id, link_idr, entry_temp->index, entry_temp->mac64);
+                etx_remote_incoming_idr_update(interface_id, link_idr, entry_temp->index);
 
                 if ((iop_flags & MLE_NEIGHBOR_PRIORITY_LINK) == MLE_NEIGHBOR_PRIORITY_LINK) {
                     entry_temp->link_role = CHILD_NEIGHBOUR;
@@ -965,9 +965,9 @@ int protocol_6lowpan_router_synch_to_new_router(protocol_interface_info_entry_t 
 static uint8_t mle_calculate_idr(int8_t interface_id, mle_message_t *mle_msg, mac_neighbor_table_entry_t *entry_temp)
 {
     if (!entry_temp) {
-        return etx_lqi_dbm_update(-2, mle_msg->lqi, mle_msg->dbm, 0, NULL) >> 3;
+        return etx_lqi_dbm_update(-2, mle_msg->lqi, mle_msg->dbm, 0) >> 3;
     }
-    return etx_lqi_dbm_update(interface_id, mle_msg->lqi, mle_msg->dbm, entry_temp->index, entry_temp->mac64) >> 3;
+    return etx_lqi_dbm_update(interface_id, mle_msg->lqi, mle_msg->dbm, entry_temp->index) >> 3;
 
 }
 
@@ -1379,8 +1379,6 @@ static int8_t arm_6lowpan_bootstrap_down(protocol_interface_info_entry_t *cur)
     }
     cur->if_lowpan_security_params->mle_security_frame_counter = mle_service_security_get_frame_counter(cur->id);
     mle_service_interface_receiver_handler_update(cur->id, mle_6lowpan_message_handler);
-    // Reset MAC for safe upper layer memory free
-    protocol_mac_reset(cur);
     return nwk_6lowpan_down(cur);
 }
 #ifdef HAVE_6LOWPAN_ND
@@ -1548,7 +1546,7 @@ int8_t arm_network_processor_up(protocol_interface_info_entry_t *cur)
 {
     int8_t ret_val = -1;
     if ((cur->configure_flags & INTERFACE_SETUP_NETWORK_DRIVER_MASK) != INTERFACE_SETUP_NETWORK_DRIVER_READY) {
-        tr_debug("Interface not yet fully configured");
+        tr_debug("Interface not yet fully configured\n");
         ret_val = -5;
     } else {
         protocol_6lowpan_register_handlers(cur);
@@ -1595,7 +1593,7 @@ static void lowpan_neighbor_entry_remove_notify(mac_neighbor_table_entry_t *entr
 {
 
     protocol_interface_info_entry_t *cur_interface = user_data;
-    lowpan_adaptation_neigh_remove_free_tx_tables(cur_interface, entry_ptr);
+    lowpan_adaptation_remove_free_indirect_table(cur_interface, entry_ptr);
     // Sleepy host
     if (cur_interface->lowpan_info & INTERFACE_NWK_CONF_MAC_RX_OFF_IDLE) {
         mac_data_poll_protocol_poll_mode_decrement(cur_interface);
@@ -1609,7 +1607,7 @@ static void lowpan_neighbor_entry_remove_notify(mac_neighbor_table_entry_t *entr
     }
     mac_helper_devicetable_remove(cur_interface->mac_api, entry_ptr->index, entry_ptr->mac64);
     //Removes ETX neighbor
-    etx_neighbor_remove(cur_interface->id, entry_ptr->index, entry_ptr->mac64);
+    etx_neighbor_remove(cur_interface->id, entry_ptr->index);
     //Remove MLE frame counter info
     mle_service_frame_counter_entry_delete(cur_interface->id, entry_ptr->index);
 
@@ -2123,7 +2121,7 @@ static void nwk_rpl_dio_scan(protocol_interface_info_entry_t *cur)
         if (nwk_bootstrap_icmp_rpl_dis_msg_tx(cur)) {
             cur->bootsrap_state_machine_cnt = 45 << cur->nwk_rpl_scan_counter;
             cur->nwk_rpl_scan_counter++;
-            tr_debug("MC_DIS");
+            tr_debug("MC_DIS\n");
             cur->nwk_bootstrap_state = ER_RPL_SCAN;
         } else {
             cur->bootsrap_state_machine_cnt = 3;
@@ -2184,7 +2182,7 @@ void nwk_6lowpan_nd_address_registartion_ready(protocol_interface_info_entry_t *
             // arm_nwk_6lowpan_rpl_dodag_poison from a previous connection may have left force_leaf set
             rpl_control_force_leaf(protocol_6lowpan_rpl_domain, false);
             rpl_control_set_domain_on_interface(cur, protocol_6lowpan_rpl_domain, true);
-            rpl_control_set_callback(protocol_6lowpan_rpl_domain, protocol_6lowpan_bootstrap_rpl_callback, NULL, NULL, NULL, cur);
+            rpl_control_set_callback(protocol_6lowpan_rpl_domain, protocol_6lowpan_bootstrap_rpl_callback, NULL, NULL, cur);
         }
         // Send unicast DIS to coordinator
         nwk_bootstrap_icmp_rpl_dis_coord_msg_tx(cur);

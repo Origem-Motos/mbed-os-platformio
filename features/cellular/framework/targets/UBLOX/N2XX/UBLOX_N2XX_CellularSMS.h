@@ -20,8 +20,6 @@
 
 #include "AT_CellularSMS.h"
 
-#if MBED_CONF_CELLULAR_USE_SMS
-
 namespace mbed {
 
 class UBLOX_N2XX_CellularSMS : public AT_CellularSMS {
@@ -43,7 +41,5 @@ public:
 };
 
 } // namespace mbed
-
-#endif // MBED_CONF_CELLULAR_USE_SMS
 
 #endif // UBLOX_N2XX_CELLULAR_SMS_H_

@@ -16,6 +16,7 @@
  */
 
 #include "UBLOX_AT_CellularNetwork.h"
+
 #include "rtos/ThisThread.h"
 
 using namespace mbed;
@@ -46,11 +47,11 @@ nsapi_error_t UBLOX_AT_CellularNetwork::set_access_technology_impl(RadioAccessTe
     _at.lock();
     switch (opRat) {
         case RAT_EGPRS:
-#if defined (UBX_MDM_SARA_R412M)
+#if defined (TARGET_UBLOX_C030_R412M)
             _at.at_cmd_discard("+URAT", "=", "%d%d", 9, 8);
             break;
 #endif
-#if defined(UBX_MDM_SARA_U201)
+#if defined(TARGET_UBLOX_C030_U201)
         case RAT_GSM:
             _at.at_cmd_discard("+URAT", "=", "%d%d", 0, 0);
             break;
@@ -60,7 +61,7 @@ nsapi_error_t UBLOX_AT_CellularNetwork::set_access_technology_impl(RadioAccessTe
         case RAT_HSDPA_HSUPA:
             _at.at_cmd_discard("+URAT", "=", "%d%d", 2, 2);
             break;
-#elif defined(UBX_MDM_SARA_R41XM)
+#elif defined(TARGET_UBLOX_C030_R41XM)
         case RAT_CATM1:
             _at.at_cmd_discard("+URAT", "=", "%d%d", 7, 8);
             break;

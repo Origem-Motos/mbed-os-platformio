@@ -66,12 +66,6 @@ struct trng_s {
     uint8_t dummy;
 };
 
-#if DEVICE_FLASH
-struct flash_s {
-    uint8_t dummy;
-};
-#endif
-
 #include "gpio_object.h"
 
 #ifdef __cplusplus

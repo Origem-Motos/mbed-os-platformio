@@ -144,11 +144,6 @@ typedef enum {
 
 } CANName;
 
-typedef enum {
-    TRNG_0 = (int) NU_MODNAME(TRNG_BASE, 0, 0)
-
-} TRNGName;
-
 #ifdef __cplusplus
 }
 #endif

@@ -13,20 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#if !defined(MBED_CONF_RTOS_PRESENT)
-#error [NOT_SUPPORTED] LORADIO test cases require a RTOS to run.
-#else
-
-#define SX1272   0xFF
-#define SX1276   0xEE
-
-#if (MBED_CONF_APP_LORA_RADIO == SX1272)
-#include "SX1272_LoRaRadio.h"
-#elif (MBED_CONF_APP_LORA_RADIO == SX1276)
-#include "SX1276_LoRaRadio.h"
-#else
-#error [NOT_SUPPORTED] Requires parameters from application config file.
-#endif
 
 #include "utest.h"
 #include "unity.h"
@@ -38,6 +24,17 @@
 #define TRACE_GROUP "RTST"
 
 #include "LoRaRadio.h"
+
+#define SX1272   0xFF
+#define SX1276   0xEE
+
+#if (MBED_CONF_APP_LORA_RADIO == SX1272)
+#include "SX1272_LoRaRadio.h"
+#elif (MBED_CONF_APP_LORA_RADIO == SX1276)
+#include "SX1276_LoRaRadio.h"
+#else
+#error [NOT_SUPPORTED] Requires parameters from application config file.
+#endif
 
 #if (MBED_CONF_APP_LORA_RADIO == SX1272) || (MBED_CONF_APP_LORA_RADIO == SX1276)
 
@@ -287,4 +284,3 @@ int main()
 }
 
 #endif // (MBED_CONF_APP_LORA_RADIO == SX1272) || (MBED_CONF_APP_LORA_RADIO == SX1276)
-#endif // !defined(MBED_CONF_RTOS_PRESENT)

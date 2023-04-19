@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#if defined(MBED_CONF_RTOS_PRESENT)
 
 #include "unity.h"
 
@@ -155,34 +154,14 @@ char *EmacTestNetworkStack::Interface::get_mac_address(char *buf, nsapi_size_t b
     return NULL;
 }
 
-nsapi_error_t EmacTestNetworkStack::Interface::set_mac_address(uint8_t *buf, nsapi_size_t buflen)
-{
-    return NSAPI_STATUS_ERROR_UNSUPPORTED;
-}
-
-nsapi_error_t EmacTestNetworkStack::Interface::get_ip_address(SocketAddress *address)
-{
-    return NSAPI_ERROR_OK;
-}
-
 char *EmacTestNetworkStack::Interface::get_ip_address(char *buf, nsapi_size_t buflen)
 {
     return NULL;
 }
 
-nsapi_error_t EmacTestNetworkStack::Interface::get_netmask(SocketAddress *address)
-{
-    return NSAPI_ERROR_OK;
-}
-
 char *EmacTestNetworkStack::Interface::get_netmask(char *buf, nsapi_size_t buflen)
 {
     return NULL;
-}
-
-nsapi_error_t EmacTestNetworkStack::Interface::get_gateway(SocketAddress *address)
-{
-    return NSAPI_ERROR_OK;
 }
 
 char *EmacTestNetworkStack::Interface::get_gateway(char *buf, nsapi_size_t buflen)
@@ -223,5 +202,4 @@ OnboardNetworkStack &OnboardNetworkStack::get_default_instance()
 {
     return EmacTestNetworkStack::get_instance();
 }
-#endif // defined(MBED_CONF_RTOS_PRESENT)
 #endif

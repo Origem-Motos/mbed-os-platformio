@@ -29,7 +29,6 @@ public:
 
     virtual void do_connect();
     virtual const char *get_gateway();
-    virtual nsapi_error_t get_gateway(SocketAddress *addr);
 
     const char *get_apn(void);
     const char *get_uname(void);
@@ -46,7 +45,7 @@ public:
     /** Get the next set of credentials from the database.
      */
     void get_next_credentials(char **config);
-#ifdef UBX_MDM_SARA_R412M
+#ifdef TARGET_UBLOX_C030_R412M
     CellularNetwork::RadioAccessTechnology read_radio_technology(void);
 #endif
 protected:
@@ -56,7 +55,7 @@ protected:
      *
      * @return      True if successful, otherwise false.
      */
-#ifndef UBX_MDM_SARA_R41XM
+#ifndef TARGET_UBLOX_C030_R41XM
     nsapi_error_t define_context();
 #endif
 
@@ -80,7 +79,7 @@ private:
      *                 CHAP or AUTOMATIC).
      * @return         True if successful, otherwise false.
      */
-#ifndef UBX_MDM_SARA_R41XM
+#ifndef TARGET_UBLOX_C030_R41XM
     bool activate_profile(const char *apn, const char *username, const char *password, AuthenticationType auth);
 #endif
 

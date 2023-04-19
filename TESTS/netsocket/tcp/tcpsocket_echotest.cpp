@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-#if defined(MBED_CONF_RTOS_PRESENT)
 #include "mbed.h"
 #include "TCPSocket.h"
 #include "greentea-client/test_env.h"
@@ -73,11 +72,11 @@ void TCPSOCKET_ECHOTEST()
         fill_tx_buffer_ascii(tcp_global::tx_buffer, BUFF_SIZE);
         sent = sock.send(tcp_global::tx_buffer, pkt_s);
         if (sent < 0) {
-            tr_error("[Round#%02d] network error %d", s_idx, sent);
+            printf("[Round#%02d] network error %d\n", s_idx, sent);
             TEST_FAIL();
             break;
         } else if (sent != pkt_s) {
-            tr_error("[%02d] sock.send return size %d does not match the expectation %d", s_idx, sent, pkt_s);
+            printf("[%02d] sock.send return size %d does not match the expectation %d\n", s_idx, sent, pkt_s);
             TEST_FAIL();
             break;
         }
@@ -86,7 +85,7 @@ void TCPSOCKET_ECHOTEST()
         while (bytes2recv) {
             recvd = sock.recv(&(tcp_global::rx_buffer[sent - bytes2recv]), bytes2recv);
             if (recvd < 0) {
-                tr_error("[Round#%02d] network error %d", s_idx, recvd);
+                printf("[Round#%02d] network error %d\n", s_idx, recvd);
                 TEST_FAIL();
                 TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, sock.close());
                 return;
@@ -111,7 +110,7 @@ void tcpsocket_echotest_nonblock_receive()
             }
             return;
         } else if (recvd < 0) {
-            tr_error("sock.recv returned an error %d", recvd);
+            printf("sock.recv returned an error %d", recvd);
             TEST_FAIL();
             receive_error = true;
         } else {
@@ -172,7 +171,7 @@ void TCPSOCKET_ECHOTEST_NONBLOCK()
                 }
                 continue;
             } else if (sent <= 0) {
-                tr_error("[Sender#%02d] network error %d", s_idx, sent);
+                printf("[Sender#%02d] network error %d\n", s_idx, sent);
                 TEST_FAIL();
                 goto END;
             }
@@ -202,4 +201,3 @@ END:
     tc_exec_time.stop();
     free(stack_mem);
 }
-#endif // defined(MBED_CONF_RTOS_PRESENT)

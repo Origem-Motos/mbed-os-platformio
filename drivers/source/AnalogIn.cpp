@@ -30,14 +30,6 @@ AnalogIn::AnalogIn(PinName pin)
     unlock();
 }
 
-AnalogIn::AnalogIn(const PinMap &pinmap)
-{
-    lock();
-    analogin_init_direct(&_adc, &pinmap);
-    unlock();
-}
-
-
 float AnalogIn::read()
 {
     lock();

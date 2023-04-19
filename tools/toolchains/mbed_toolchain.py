@@ -49,7 +49,6 @@ from ..config import (ConfigException, RAM_ALL_MEMORIES, ROM_ALL_MEMORIES)
 from ..regions import (UPDATE_WHITELIST, merge_region_list)
 from ..settings import COMPARE_FIXED
 from ..settings import ARM_PATH, ARMC6_PATH, GCC_ARM_PATH, IAR_PATH
-from future.utils import with_metaclass
 
 
 TOOLCHAIN_PATHS = {
@@ -110,7 +109,7 @@ CORTEX_SYMBOLS = {
 }
 
 
-class mbedToolchain(with_metaclass(ABCMeta, object)):
+class mbedToolchain:
     OFFICIALLY_SUPPORTED = False
 
     # Verbose logging
@@ -127,6 +126,8 @@ class mbedToolchain(with_metaclass(ABCMeta, object)):
     MBED_CONFIG_FILE_NAME = "mbed_config.h"
 
     PROFILE_FILE_NAME = ".profile"
+
+    __metaclass__ = ABCMeta
 
     profile_template = {'common': [], 'c': [], 'cxx': [], 'asm': [], 'ld': []}
 
@@ -555,7 +556,9 @@ class mbedToolchain(with_metaclass(ABCMeta, object)):
                             ])
                         objects.append(result['object'])
                     except ToolException as err:
-                        # Stop the worker processes immediately without completing outstanding work
+                        if p._taskqueue.queue:
+                            p._taskqueue.queue.clear()
+                            sleep(0.5)
                         p.terminate()
                         p.join()
                         raise ToolException(err)
@@ -894,10 +897,6 @@ class mbedToolchain(with_metaclass(ABCMeta, object)):
     def add_regions(self):
         """Add regions to the build profile, if there are any.
         """
-
-        if not getattr(self.target, "bootloader_supported", False):
-            return
-
         if self.config.has_regions:
             try:
                 regions = list(self.config.regions)
@@ -907,8 +906,8 @@ class mbedToolchain(with_metaclass(ABCMeta, object)):
                     ", ".join(r.name for r in regions)
                 ))
                 self._add_all_regions(regions, "MBED_APP")
-            except ConfigException as error:
-                self.notify.info("Configuration error: %s" % str(error))
+            except ConfigException:
+                pass
 
         if self.config.has_ram_regions:
             try:
@@ -918,17 +917,15 @@ class mbedToolchain(with_metaclass(ABCMeta, object)):
                     ", ".join(r.name for r in regions)
                 ))
                 self._add_all_regions(regions, None)
-            except ConfigException as error:
-                self.notify.info("Configuration error: %s" % str(error))
+            except ConfigException:
+                pass
 
         Region = namedtuple("Region", "name start size")
 
-        if not getattr(self.target, "static_memory_defines", False):
-            self.notify.info("Configuration error: 'static_memory_defines' is not defined.")
-            return
-
         try:
             # Add all available ROM regions to build profile
+            if not getattr(self.target, "static_memory_defines", False):
+                raise ConfigException()
             rom_available_regions = self.config.get_all_active_memories(
                 ROM_ALL_MEMORIES
             )
@@ -939,11 +936,12 @@ class mbedToolchain(with_metaclass(ABCMeta, object)):
                     True,
                     suffixes=["_START", "_SIZE"]
                 )
-        except ConfigException as error:
-            self.notify.info("Configuration error: %s" % str(error))
-
+        except ConfigException:
+            pass
         try:
             # Add all available RAM regions to build profile
+            if not getattr(self.target, "static_memory_defines", False):
+                raise ConfigException()
             ram_available_regions = self.config.get_all_active_memories(
                 RAM_ALL_MEMORIES
             )
@@ -954,12 +952,11 @@ class mbedToolchain(with_metaclass(ABCMeta, object)):
                     True,
                     suffixes=["_START", "_SIZE"]
                 )
-        except ConfigException as error:
-            self.notify.info("Configuration error: %s" % str(error))
+        except ConfigException:
+            pass
 
     STACK_PARAM = "target.boot-stack-size"
     TFM_LVL_PARAM = "tfm.level"
-    XIP_ENABLE_PARAM = "target.xip-enable"
 
     def add_linker_defines(self):
         params, _ = self.config_data
@@ -977,14 +974,6 @@ class mbedToolchain(with_metaclass(ABCMeta, object)):
             define_string = self.make_ld_define(
                 "TFM_LVL",
                 params[self.TFM_LVL_PARAM].value
-            )
-            self.ld.append(define_string)
-            self.flags["ld"].append(define_string)
-
-        if self.XIP_ENABLE_PARAM in params:
-            define_string = self.make_ld_define(
-                "XIP_ENABLE",
-                params[self.XIP_ENABLE_PARAM].value
             )
             self.ld.append(define_string)
             self.flags["ld"].append(define_string)

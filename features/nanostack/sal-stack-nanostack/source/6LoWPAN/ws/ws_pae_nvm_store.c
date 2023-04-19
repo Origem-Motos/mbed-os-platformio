@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, Pelion and affiliates.
+ * Copyright (c) 2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 #include "nsconfig.h"
 #include <string.h>
+#include <stdio.h>
 #include "ns_types.h"
 #include "ns_list.h"
 #include "ns_trace.h"
@@ -24,11 +25,9 @@
 #include "common_functions.h"
 #include "6LoWPAN/ws/ws_config.h"
 #include "ns_file_system.h"
-#include "Service_Libs/utils/ns_file.h"
 #include "Security/protocols/sec_prot_certs.h"
 #include "Security/protocols/sec_prot_keys.h"
 #include "6LoWPAN/ws/ws_pae_nvm_store.h"
-#include "ns_file_system.h"
 
 #ifdef HAVE_WS
 
@@ -40,37 +39,10 @@ static uint16_t ws_pae_nvm_store_path_len_get(const char *file_name);
 static const char *ws_pae_nvm_store_get_root_path(void);
 static int8_t ws_pae_nvm_store_root_path_valid(void);
 static int8_t ws_pae_nvm_store_create_path(char *fast_data_path, const char *file_name);
-static int8_t ws_pae_nvm_store_write(const char *file_name, nvm_tlv_t *tlv);
-static int8_t ws_pae_nvm_store_read(const char *file_name, nvm_tlv_t *tlv);
+static int8_t ws_pae_nvm_store_write(const char *file_name, nvm_tlv_list_t *tlv_list);
+static int8_t ws_pae_nvm_store_read(const char *file_name, nvm_tlv_list_t *tlv_list);
 
-void ws_pae_nvm_store_generic_tlv_create(nvm_tlv_t *tlv_entry, uint16_t tag, uint16_t length)
-{
-    tlv_entry->tag = tag;
-    tlv_entry->len = length;
-}
-
-nvm_tlv_t *ws_pae_nvm_store_generic_tlv_allocate_and_create(uint16_t tag, uint16_t length)
-{
-    nvm_tlv_t *tlv_entry = ns_dyn_mem_alloc(length + sizeof(nvm_tlv_t));
-    if (!tlv_entry) {
-        return NULL;
-    }
-    tlv_entry->tag = tag;
-    tlv_entry->len = length;
-
-    return tlv_entry;
-}
-
-void ws_pae_nvm_store_generic_tlv_free(nvm_tlv_t *tlv_entry)
-{
-    if (!tlv_entry) {
-        return;
-    }
-
-    ns_dyn_mem_free(tlv_entry);
-}
-
-int8_t ws_pae_nvm_store_tlv_file_write(const char *file, nvm_tlv_t *tlv)
+int8_t ws_pae_nvm_store_tlv_file_write(const char *file, nvm_tlv_list_t *tlv_list)
 {
     if (!ws_pae_nvm_store_root_path_valid()) {
         return PAE_NVM_FILE_ROOT_PATH_INVALID;
@@ -82,10 +54,10 @@ int8_t ws_pae_nvm_store_tlv_file_write(const char *file, nvm_tlv_t *tlv)
 
     ws_pae_nvm_store_create_path(nw_info_path, file);
 
-    return ws_pae_nvm_store_write(nw_info_path, tlv);
+    return ws_pae_nvm_store_write(nw_info_path, tlv_list);
 }
 
-int8_t ws_pae_nvm_store_tlv_file_read(const char *file, nvm_tlv_t *tlv)
+int8_t ws_pae_nvm_store_tlv_file_read(const char *file, nvm_tlv_list_t *tlv_list)
 {
     if (!ws_pae_nvm_store_root_path_valid()) {
         return PAE_NVM_FILE_ROOT_PATH_INVALID;
@@ -97,27 +69,7 @@ int8_t ws_pae_nvm_store_tlv_file_read(const char *file, nvm_tlv_t *tlv)
 
     ws_pae_nvm_store_create_path(nw_info_path, file);
 
-    return ws_pae_nvm_store_read(nw_info_path, tlv);
-}
-
-int8_t ws_pae_nvm_store_tlv_file_remove(const char *file)
-{
-    if (!ws_pae_nvm_store_root_path_valid()) {
-        return PAE_NVM_FILE_ROOT_PATH_INVALID;
-    }
-
-    uint16_t path_len = ws_pae_nvm_store_path_len_get(file);
-
-    char nw_info_path[path_len];
-
-    ws_pae_nvm_store_create_path(nw_info_path, file);
-
-    int ret = ns_fremove(nw_info_path);
-    if (ret < 0) {
-        return -1;
-    }
-
-    return 0;
+    return ws_pae_nvm_store_read(nw_info_path, tlv_list);
 }
 
 static const char *ws_pae_nvm_store_get_root_path(void)
@@ -154,49 +106,104 @@ static int8_t ws_pae_nvm_store_create_path(char *data_path, const char *file_nam
     return 0;
 }
 
-static int8_t ws_pae_nvm_store_write(const char *file_name, nvm_tlv_t *tlv)
+static int8_t ws_pae_nvm_store_write(const char *file_name, nvm_tlv_list_t *tlv_list)
 {
-    if (!file_name || !tlv) {
-        return -1;
-    }
-
-    NS_FILE *fp = ns_fopen(file_name, "w");
+    FILE *fp = fopen(file_name, "w");
     if (fp == NULL) {
         tr_error("NVM open error: %s", file_name);
         return PAE_NVM_FILE_CANNOT_OPEN;
     }
 
-    size_t n_bytes = ns_fwrite(fp, tlv, tlv->len + sizeof(nvm_tlv_t));
-    ns_fclose(fp);
-    if (n_bytes != tlv->len + sizeof(nvm_tlv_t)) {
-        tr_error("NVM write error %s", file_name);
+    uint16_t list_count = ns_list_count(tlv_list);
+    size_t n_bytes = fwrite(&list_count, 1, sizeof(uint16_t), fp);
+    if (n_bytes != sizeof(uint16_t)) {
+        tr_warning("NVM TLV list count write error");
+        fclose(fp);
         return PAE_NVM_FILE_WRITE_ERROR;
     }
 
-    return PAE_NVM_FILE_SUCCESS;
-}
+    bool failure = false;
 
-static int8_t ws_pae_nvm_store_read(const char *file_name, nvm_tlv_t *tlv)
-{
-    if (!file_name || !tlv) {
-        return -1;
+    ns_list_foreach(nvm_tlv_entry_t, entry, tlv_list) {
+        n_bytes = fwrite(&entry->tag, 1, entry->len + NVM_TLV_FIXED_LEN, fp);
+        if (n_bytes != (size_t) entry->len + NVM_TLV_FIXED_LEN) {
+            failure = true;
+            break;
+        }
     }
 
-    NS_FILE *fp = ns_fopen(file_name, "r");
+    fclose(fp);
+    if (failure) {
+        tr_error("NVM write error %s", file_name);
+        return PAE_NVM_FILE_WRITE_ERROR;
+    } else {
+        return PAE_NVM_FILE_SUCCESS;
+    }
+}
+
+static int8_t ws_pae_nvm_store_read(const char *file_name, nvm_tlv_list_t *tlv_list)
+{
+    FILE *fp = fopen(file_name, "r");
     if (fp == NULL) {
         tr_warning("File not found: %s", file_name);
         return PAE_NVM_FILE_CANNOT_OPEN;
     }
 
-    size_t n_bytes = ns_fread(fp, tlv, tlv->len + sizeof(nvm_tlv_t));
-    ns_fclose(fp);
-    if (n_bytes != tlv->len + sizeof(nvm_tlv_t)) {
-        tr_warning("File not found or cannot be read: %s", file_name);
+    uint16_t list_count;
+    size_t n_bytes = fread(&list_count, 1, sizeof(uint16_t), fp);
+    if (n_bytes != sizeof(uint16_t)) {
+        tr_warning("NVM TLV list count read error %s", file_name);
+        fclose(fp);
         return PAE_NVM_FILE_READ_ERROR;
     }
 
-    return PAE_NVM_FILE_SUCCESS;
+    bool failure = false;
+
+    while (list_count-- > 0) {
+        nvm_tlv_entry_t entry_header;
+        memset(&entry_header, 0, sizeof(nvm_tlv_entry_t));
+        n_bytes = fread(&entry_header.tag, 1, NVM_TLV_FIXED_LEN, fp);
+        if (n_bytes != NVM_TLV_FIXED_LEN) {
+            failure = true;
+            break;
+        }
+        uint16_t len = entry_header.len;
+
+        nvm_tlv_entry_t *entry = ns_dyn_mem_temporary_alloc(sizeof(nvm_tlv_entry_t) + len);
+        if (!entry) {
+            failure = true;
+            break;
+        }
+
+        memcpy(&entry->tag, &entry_header.tag, NVM_TLV_FIXED_LEN);
+
+        if (len > 0) {
+            uint8_t *data_ptr = ((uint8_t *)&entry->tag) + NVM_TLV_FIXED_LEN;
+            n_bytes = fread(data_ptr, 1, len, fp);
+            if (n_bytes != len) {
+                ns_dyn_mem_free(entry);
+                failure = true;
+                break;
+            }
+        }
+
+        ns_list_add_to_end(tlv_list, entry);
+    }
+
+    fclose(fp);
+
+    if (failure) {
+        ns_list_foreach_safe(nvm_tlv_entry_t, entry, tlv_list) {
+            ns_list_remove(tlv_list, entry);
+            ns_dyn_mem_free(entry);
+        }
+        tr_error("NVM read error %s", file_name);
+        return PAE_NVM_FILE_READ_ERROR;
+    } else {
+        return PAE_NVM_FILE_SUCCESS; // return how many bytes was written.
+    }
 }
+
 
 #endif /* HAVE_WS */
 

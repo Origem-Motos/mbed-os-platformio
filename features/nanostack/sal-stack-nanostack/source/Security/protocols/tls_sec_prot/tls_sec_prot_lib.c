@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, Pelion and affiliates.
+ * Copyright (c) 2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,9 +18,13 @@
 #include "nsconfig.h"
 
 #ifdef HAVE_WS
+#if !defined(MBEDTLS_CONFIG_FILE)
+#include "mbedtls/config.h"
+#else
+#include MBEDTLS_CONFIG_FILE
+#endif
 
-#include "mbedtls/version.h"
-#if defined(MBEDTLS_SSL_TLS_C) && defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_SSL_EXPORT_KEYS) /* EXPORT_KEYS not supported by mbedtls baremetal yet */
+#if defined(MBEDTLS_SSL_TLS_C) && defined(MBEDTLS_X509_CRT_PARSE_C)
 #define WS_MBEDTLS_SECURITY_ENABLED
 #endif
 
@@ -31,24 +35,23 @@
 #include "ns_trace.h"
 #include "nsdynmemLIB.h"
 #include "common_functions.h"
-#include "Service_Libs/Trickle/trickle.h"
-#include "Security/protocols/sec_prot_cfg.h"
 #include "Security/protocols/sec_prot_certs.h"
 #include "Security/protocols/tls_sec_prot/tls_sec_prot_lib.h"
 
-#if defined(MBEDTLS_SSL_TLS_C) && defined(MBEDTLS_X509_CRT_PARSE_C) && defined(MBEDTLS_SSL_EXPORT_KEYS) /* EXPORT_KEYS not supported by mbedtls baremetal yet */
 #ifdef WS_MBEDTLS_SECURITY_ENABLED
-#endif
 
 #include "mbedtls/sha256.h"
 #include "mbedtls/error.h"
 #include "mbedtls/platform.h"
 #include "mbedtls/ssl_cookie.h"
 #include "mbedtls/entropy.h"
+#include "mbedtls/entropy_poll.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/ssl_ciphersuites.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/oid.h"
+
+#include "mbedtls/ssl_internal.h"
 
 #define TRACE_GROUP "tlsl"
 
@@ -72,9 +75,7 @@ struct tls_security_s {
     mbedtls_pk_context             pkey;                 /**< Private key for own certificate */
     void                           *handle;              /**< Handle provided in callbacks (defined by library user) */
     bool                           ext_cert_valid : 1;   /**< Extended certificate validation enabled */
-#if (MBEDTLS_VERSION_MAJOR < 3)
     tls_sec_prot_lib_crt_verify_cb *crt_verify;          /**< Verify function for client/server certificate */
-#endif
     tls_sec_prot_lib_send          *send;                /**< Send callback */
     tls_sec_prot_lib_receive       *receive;             /**< Receive callback */
     tls_sec_prot_lib_export_keys   *export_keys;         /**< Export keys callback */
@@ -87,22 +88,12 @@ static int tls_sec_prot_lib_ssl_get_timer(void *ctx);
 static int tls_sec_lib_entropy_poll(void *data, unsigned char *output, size_t len, size_t *olen);
 static int tls_sec_prot_lib_ssl_send(void *ctx, const unsigned char *buf, size_t len);
 static int tls_sec_prot_lib_ssl_recv(void *ctx, unsigned char *buf, size_t len);
-#if (MBEDTLS_VERSION_MAJOR >= 3)
-static void tls_sec_prot_lib_ssl_export_keys(void *p_expkey, mbedtls_ssl_key_export_type type,
-                                             const unsigned char *secret,
-                                             size_t secret_len,
-                                             const unsigned char client_random[32],
-                                             const unsigned char server_random[32],
-                                             mbedtls_tls_prf_types tls_prf_type);
-#else
-static int tls_sec_prot_lib_ssl_export_keys(void *p_expkey, const unsigned char *secret,
+static int tls_sec_prot_lib_ssl_export_keys(void *p_expkey, const unsigned char *ms,
                                             const unsigned char *kb, size_t maclen, size_t keylen,
                                             size_t ivlen, const unsigned char client_random[32],
                                             const unsigned char server_random[32],
                                             mbedtls_tls_prf_types tls_prf_type);
-#endif
 
-#if (MBEDTLS_VERSION_MAJOR < 3)
 static int tls_sec_prot_lib_x509_crt_verify(void *ctx, mbedtls_x509_crt *crt, int certificate_depth, uint32_t *flags);
 static int8_t tls_sec_prot_lib_subject_alternative_name_validate(mbedtls_x509_crt *crt);
 static int8_t tls_sec_prot_lib_extended_key_usage_validate(mbedtls_x509_crt *crt);
@@ -111,7 +102,6 @@ static int tls_sec_prot_lib_x509_crt_idevid_ldevid_verify(tls_security_t *sec, m
 #endif
 #ifdef HAVE_PAE_SUPP
 static int tls_sec_prot_lib_x509_crt_server_verify(tls_security_t *sec, mbedtls_x509_crt *crt, uint32_t *flags);
-#endif
 #endif
 #ifdef TLS_SEC_PROT_LIB_TLS_DEBUG
 static void tls_sec_prot_lib_debug(void *ctx, int level, const char *file, int line, const char *string);
@@ -242,11 +232,7 @@ static int tls_sec_prot_lib_configure_certificates(tls_security_t *sec, const se
         return -1;
     }
 
-#if (MBEDTLS_VERSION_MAJOR >= 3)
-    if (mbedtls_pk_parse_key(&sec->pkey, key, key_len, NULL, 0, mbedtls_ctr_drbg_random, &sec->ctr_drbg) < 0) {
-#else
     if (mbedtls_pk_parse_key(&sec->pkey, key, key_len, NULL, 0) < 0) {
-#endif
         tr_error("Private key parse error");
         return -1;
     }
@@ -322,7 +308,6 @@ int8_t tls_sec_prot_lib_connect(tls_security_t *sec, bool is_server, const sec_p
         return -1;
     }
 
-#if (MBEDTLS_VERSION_MAJOR < 3)
 #ifdef HAVE_PAE_SUPP
     if (is_server_is_not_set) {
         sec->crt_verify = tls_sec_prot_lib_x509_crt_server_verify;
@@ -333,7 +318,7 @@ int8_t tls_sec_prot_lib_connect(tls_security_t *sec, bool is_server, const sec_p
         sec->crt_verify = tls_sec_prot_lib_x509_crt_idevid_ldevid_verify;
     }
 #endif
-#endif
+
 
     if ((mbedtls_ssl_config_defaults(&sec->conf,
                                      is_server_is_set ? MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT,
@@ -342,10 +327,8 @@ int8_t tls_sec_prot_lib_connect(tls_security_t *sec, bool is_server, const sec_p
         return -1;
     }
 
-#if !defined(MBEDTLS_SSL_CONF_RNG)
     // Configure random number generator
     mbedtls_ssl_conf_rng(&sec->conf, mbedtls_ctr_drbg_random, &sec->ctr_drbg);
-#endif
 
 #ifdef MBEDTLS_ECP_RESTARTABLE
     // Set ECC calculation maximum operations (affects only client)
@@ -357,22 +340,9 @@ int8_t tls_sec_prot_lib_connect(tls_security_t *sec, bool is_server, const sec_p
         return -1;
     }
 
-    // Defines MBEDTLS_SSL_CONF_RECV/SEND/RECV_TIMEOUT define global functions which should be the same for all
-    // callers of mbedtls_ssl_set_bio_ctx and there should be only one ssl context. If these rules don't apply,
-    // these defines can't be used.
-#if !defined(MBEDTLS_SSL_CONF_RECV) && !defined(MBEDTLS_SSL_CONF_SEND) && !defined(MBEDTLS_SSL_CONF_RECV_TIMEOUT)
     // Set calbacks
     mbedtls_ssl_set_bio(&sec->ssl, sec, tls_sec_prot_lib_ssl_send, tls_sec_prot_lib_ssl_recv, NULL);
-#else
-    mbedtls_ssl_set_bio_ctx(&sec->ssl, sec);
-#endif /* !defined(MBEDTLS_SSL_CONF_RECV) && !defined(MBEDTLS_SSL_CONF_SEND) && !defined(MBEDTLS_SSL_CONF_RECV_TIMEOUT) */
-
-// Defines MBEDTLS_SSL_CONF_SET_TIMER/GET_TIMER define global functions which should be the same for all
-// callers of mbedtls_ssl_set_timer_cb and there should be only one ssl context. If these rules don't apply,
-// these defines can't be used.
-#if !defined(MBEDTLS_SSL_CONF_SET_TIMER) && !defined(MBEDTLS_SSL_CONF_GET_TIMER)
     mbedtls_ssl_set_timer_cb(&sec->ssl, sec, tls_sec_prot_lib_ssl_set_timer, tls_sec_prot_lib_ssl_get_timer);
-#endif /* !defined(MBEDTLS_SSL_CONF_SET_TIMER) && !defined(MBEDTLS_SSL_CONF_GET_TIMER) */
 
     // Configure certificates, keys and certificate revocation list
     if (tls_sec_prot_lib_configure_certificates(sec, certs) != 0) {
@@ -380,7 +350,6 @@ int8_t tls_sec_prot_lib_connect(tls_security_t *sec, bool is_server, const sec_p
         return -1;
     }
 
-#if !defined(MBEDTLS_SSL_CONF_SINGLE_CIPHERSUITE)
     // Configure ciphersuites
     static const int sec_suites[] = {
         MBEDTLS_TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8,
@@ -389,7 +358,6 @@ int8_t tls_sec_prot_lib_connect(tls_security_t *sec, bool is_server, const sec_p
         0
     };
     mbedtls_ssl_conf_ciphersuites(&sec->conf, sec_suites);
-#endif /* !defined(MBEDTLS_SSL_CONF_SINGLE_CIPHERSUITE) */
 
 #ifdef TLS_SEC_PROT_LIB_TLS_DEBUG
     mbedtls_ssl_conf_dbg(&sec->conf, tls_sec_prot_lib_debug, sec);
@@ -397,31 +365,21 @@ int8_t tls_sec_prot_lib_connect(tls_security_t *sec, bool is_server, const sec_p
 #endif
 
     // Export keys callback
-#if (MBEDTLS_VERSION_MAJOR >= 3)
-    mbedtls_ssl_set_export_keys_cb(&sec->ssl, tls_sec_prot_lib_ssl_export_keys, sec);
-#else
     mbedtls_ssl_conf_export_keys_ext_cb(&sec->conf, tls_sec_prot_lib_ssl_export_keys, sec);
-#endif
 
-#if !defined(MBEDTLS_SSL_CONF_MIN_MINOR_VER) || !defined(MBEDTLS_SSL_CONF_MIN_MAJOR_VER)
     mbedtls_ssl_conf_min_version(&sec->conf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MAJOR_VERSION_3);
-#endif /* !defined(MBEDTLS_SSL_CONF_MIN_MINOR_VER) || !defined(MBEDTLS_SSL_CONF_MIN_MAJOR_VER) */
-
-#if !defined(MBEDTLS_SSL_CONF_MAX_MINOR_VER) || !defined(MBEDTLS_SSL_CONF_MAX_MAJOR_VER)
     mbedtls_ssl_conf_max_version(&sec->conf, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MAJOR_VERSION_3);
-#endif /* !defined(MBEDTLS_SSL_CONF_MAX_MINOR_VER) || !defined(MBEDTLS_SSL_CONF_MAX_MAJOR_VER) */
 
     // Set certificate verify callback
-#if (MBEDTLS_VERSION_MAJOR < 3)
     mbedtls_ssl_set_verify(&sec->ssl, tls_sec_prot_lib_x509_crt_verify, sec);
+
+#ifdef MBEDTLS_ECP_RESTARTABLE
+    if (is_server_is_set) {
+        // Temporary to enable non blocking ECC */
+        sec->ssl.handshake->ecrs_enabled = 1;
+    }
 #endif
 
-    /* Currently assuming we are running fast enough HW that ECC calculations are not blocking any normal operation.
-     *
-     * If there is a problem with ECC calculations and those are taking too long in border router
-     * MBEDTLS_ECP_RESTARTABLE feature needs to be enabled and public API is needed to allow it in border router
-     * enabling should be done here.
-     */
     return 0;
 }
 
@@ -435,7 +393,7 @@ static void tls_sec_prot_lib_debug(void *ctx, int level, const char *file, int l
 
 int8_t tls_sec_prot_lib_process(tls_security_t *sec)
 {
-    int32_t ret = -1;
+    int ret = -1;
 
     while (ret != MBEDTLS_ERR_SSL_WANT_READ) {
         ret = mbedtls_ssl_handshake_step(&sec->ssl);
@@ -447,15 +405,10 @@ int8_t tls_sec_prot_lib_process(tls_security_t *sec)
 #endif
 
         if (ret && (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)) {
-            tr_error("TLS error: %" PRId32, ret);
             return TLS_SEC_PROT_LIB_ERROR;
         }
 
-#if (MBEDTLS_VERSION_MAJOR >= 3)
-        if (sec->ssl.private_state == MBEDTLS_SSL_HANDSHAKE_OVER) {
-#else
         if (sec->ssl.state == MBEDTLS_SSL_HANDSHAKE_OVER) {
-#endif
             return TLS_SEC_PROT_LIB_HANDSHAKE_OVER;
         }
     }
@@ -492,31 +445,16 @@ static int tls_sec_prot_lib_ssl_recv(void *ctx, unsigned char *buf, size_t len)
     return ret;
 }
 
-#if (MBEDTLS_VERSION_MAJOR >= 3)
-static void tls_sec_prot_lib_ssl_export_keys(void *p_expkey, mbedtls_ssl_key_export_type type,
-                                             const unsigned char *secret,
-                                             size_t secret_len,
-                                             const unsigned char client_random[32],
-                                             const unsigned char server_random[32],
-                                             mbedtls_tls_prf_types tls_prf_type)
-#else
-static int tls_sec_prot_lib_ssl_export_keys(void *p_expkey, const unsigned char *secret,
+static int tls_sec_prot_lib_ssl_export_keys(void *p_expkey, const unsigned char *ms,
                                             const unsigned char *kb, size_t maclen, size_t keylen,
                                             size_t ivlen, const unsigned char client_random[32],
                                             const unsigned char server_random[32],
                                             mbedtls_tls_prf_types tls_prf_type)
-#endif
 {
-#if (MBEDTLS_VERSION_MAJOR >= 3)
-    if (type != MBEDTLS_SSL_KEY_EXPORT_TLS12_MASTER_SECRET || secret_len < 48) {
-        return;
-    }
-#else
     (void) kb;
     (void) maclen;
     (void) keylen;
     (void) ivlen;
-#endif
 
     tls_security_t *sec = (tls_security_t *)p_expkey;
 
@@ -525,24 +463,18 @@ static int tls_sec_prot_lib_ssl_export_keys(void *p_expkey, const unsigned char 
     memcpy(random, client_random, 32);
     memcpy(&random[32], server_random, 32);
 
-    int ret = mbedtls_ssl_tls_prf(tls_prf_type, secret, 48, "client EAP encryption",
+    int ret = mbedtls_ssl_tls_prf(tls_prf_type, ms, 48, "client EAP encryption",
                                   random, 64, eap_tls_key_material, 128);
 
     if (ret != 0) {
         tr_error("key material PRF error");
-#if (MBEDTLS_VERSION_MAJOR < 3)
         return 0;
-#endif
     }
 
-    sec->export_keys(sec->handle, secret, eap_tls_key_material);
-
-#if (MBEDTLS_VERSION_MAJOR < 3)
+    sec->export_keys(sec->handle, ms, eap_tls_key_material);
     return 0;
-#endif
 }
 
-#if (MBEDTLS_VERSION_MAJOR < 3)
 static int tls_sec_prot_lib_x509_crt_verify(void *ctx, mbedtls_x509_crt *crt, int certificate_depth, uint32_t *flags)
 {
     tls_security_t *sec = (tls_security_t *) ctx;
@@ -554,10 +486,6 @@ static int tls_sec_prot_lib_x509_crt_verify(void *ctx, mbedtls_x509_crt *crt, in
     }
     if (crt->sig_pk != MBEDTLS_PK_ECDSA) {
         tr_error("Invalid signature pk algorithm");
-    }
-    if (*flags & MBEDTLS_X509_BADCERT_FUTURE) {
-        tr_info("Certificate time future");
-        *flags &= ~MBEDTLS_X509_BADCERT_FUTURE;
     }
 
     // Verify client/server certificate of the chain
@@ -618,7 +546,7 @@ static int tls_sec_prot_lib_x509_crt_idevid_ldevid_verify(tls_security_t *sec, m
     // For both IDevID and LDevId both subject alternative name or extended key usage must be valid
     if (tls_sec_prot_lib_subject_alternative_name_validate(crt) < 0 ||
             tls_sec_prot_lib_extended_key_usage_validate(crt) < 0) {
-        tr_info("no wisun fields on cert");
+        tr_error("invalid cert");
         if (sec->ext_cert_valid) {
             *flags |= MBEDTLS_X509_BADCERT_OTHER;
             return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
@@ -638,7 +566,7 @@ static int tls_sec_prot_lib_x509_crt_server_verify(tls_security_t *sec, mbedtls_
     if (sane_res >= 0 || ext_key_res >= 0) {
         // Then both subject alternative name and extended key usage must be valid
         if (sane_res < 0 || ext_key_res < 0) {
-            tr_info("no wisun fields on cert");
+            tr_error("invalid cert");
             if (sec->ext_cert_valid) {
                 *flags |= MBEDTLS_X509_BADCERT_OTHER;
                 return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
@@ -648,7 +576,6 @@ static int tls_sec_prot_lib_x509_crt_server_verify(tls_security_t *sec, mbedtls_
 
     return 0;
 }
-#endif
 #endif
 
 static int tls_sec_lib_entropy_poll(void *ctx, unsigned char *output, size_t len, size_t *olen)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020, Pelion and affiliates.
+ * Copyright (c) 2015-2017, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-#include <string.h> // memset
 #include "mbedtls_stub.h"
 
 mbedtls_stub_def mbedtls_stub;
@@ -27,11 +26,8 @@ int mbedtls_ssl_handshake_step(mbedtls_ssl_context *ssl)
 
         if (mbedtls_stub.retArray[mbedtls_stub.counter] == HANDSHAKE_FINISHED_VALUE ||
                 mbedtls_stub.retArray[mbedtls_stub.counter] == HANDSHAKE_FINISHED_VALUE_RETURN_ZERO) {
-#if (MBEDTLS_VERSION_MAJOR >= 3)
-            ssl->private_state = MBEDTLS_SSL_HANDSHAKE_OVER;
-#else
+
             ssl->state = MBEDTLS_SSL_HANDSHAKE_OVER;
-#endif
             if (mbedtls_stub.retArray[mbedtls_stub.counter] == HANDSHAKE_FINISHED_VALUE_RETURN_ZERO) {
                 return 0;
             }
@@ -252,38 +248,6 @@ int mbedtls_ctr_drbg_random(void *p_rng,
     return mbedtls_stub.crt_expected_int;
 }
 
-// from hmac_drbg.h
-void mbedtls_hmac_drbg_init(mbedtls_hmac_drbg_context *ctx)
-{
-
-}
-
-void mbedtls_hmac_drbg_free(mbedtls_hmac_drbg_context *ctx)
-{
-
-}
-
-int mbedtls_hmac_drbg_seed(mbedtls_hmac_drbg_context *ctx,
-                           const mbedtls_md_info_t *md_info,
-                           int (*f_entropy)(void *, unsigned char *, size_t),
-                           void *p_entropy,
-                           const unsigned char *custom,
-                           size_t len)
-{
-    return mbedtls_stub.crt_expected_int;
-}
-
-int mbedtls_hmac_drbg_random(void *p_rng, unsigned char *output, size_t out_len)
-{
-    return mbedtls_stub.crt_expected_int;
-}
-
-// from md.h
-const mbedtls_md_info_t *mbedtls_md_info_from_type(mbedtls_md_type_t md_type)
-{
-    return 0;
-}
-
 //From x509_crt.h
 void mbedtls_x509_crt_init(mbedtls_x509_crt *a)
 {
@@ -349,16 +313,9 @@ int mbedtls_entropy_add_source(mbedtls_entropy_context *a,
 }
 
 //From pk.h
-#if (MBEDTLS_VERSION_MAJOR >= 3)
-int mbedtls_pk_parse_key(mbedtls_pk_context *ctx,
-                         const unsigned char *b, size_t c,
-                         const unsigned char *d, size_t e,
-                         int (*f_rng)(void *, unsigned char *, size_t), void *p_rng)
-#else
 int mbedtls_pk_parse_key(mbedtls_pk_context *a,
                          const unsigned char *b, size_t c,
                          const unsigned char *d, size_t e)
-#endif
 {
     if (mbedtls_stub.useCounter) {
         return mbedtls_stub.retArray[mbedtls_stub.counter++];
@@ -406,7 +363,6 @@ void mbedtls_ssl_conf_dtls_cookies(mbedtls_ssl_config *conf,
     }
 }
 
-#if (MBEDTLS_VERSION_MAJOR < 3)
 void mbedtls_ssl_conf_export_keys_cb(mbedtls_ssl_config *conf,
                                      mbedtls_ssl_export_keys_t *f_export_keys,
                                      void *p_export_keys)
@@ -419,7 +375,6 @@ void mbedtls_ssl_conf_export_keys_cb(mbedtls_ssl_config *conf,
         f_export_keys(p_export_keys, &value, "", 0, 20, 0); //success case
     }
 }
-#endif
 
 int mbedtls_ssl_session_reset(mbedtls_ssl_context *ssl)
 {

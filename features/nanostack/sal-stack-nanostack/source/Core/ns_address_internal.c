@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2010-2020, Pelion and affiliates.
+ * Copyright (c) 2008, 2010-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -81,7 +81,6 @@ const uint8_t ADDR_ALL_DHCP_RELAY_AGENTS_AND_SERVERS[16] = { 0xff, 0x02, [13] = 
 const uint8_t ADDR_IPV4_MAPPED_PREFIX[12]       = { [10] = 0xff, 0xff };
 const uint8_t ADDR_LOOPBACK[16]                 = { [15] = 1 };
 const uint8_t ADDR_UNSPECIFIED[16]              = { 0 };        /* Note a few bits of code check for pointer equality with ADDR_UNSPECIFIED */
-const uint8_t ADDR_6TO4[16]                     = { 0x20, 0x02 }; /*Can be used as global address*/
 #define ADDR_IPV4_COMPATIBLE                    ADDR_LOOPBACK /* First 96 bits match...*/
 
 #define ADDR_MULTICAST_LINK_PREFIX              ADDR_LINK_LOCAL_ALL_NODES /* ff02::xx */
@@ -371,7 +370,7 @@ void addr_policy_table_print(void)
     ns_list_foreach(addr_policy_table_entry_t, entry, &addr_policy_table) {
         char addr[40];
         ip6tos(entry->prefix, addr);
-        tr_debug("%3d %3d %s/%u", entry->precedence, entry->label, addr, entry->prefix_len);
+        tr_debug("%3d %3d %s/%u\n", entry->precedence, entry->label, addr, entry->prefix_len);
     }
 }
 

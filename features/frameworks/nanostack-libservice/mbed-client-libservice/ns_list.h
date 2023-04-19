@@ -1,16 +1,15 @@
 /*
- * Copyright (c) 2014-2016, 2018-2020, Pelion and affiliates.
+ * Copyright (c) 2014-2015 ARM Limited. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * Licensed under the Apache License, Version 2.0 (the License); you may
+ * not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * distributed under the License is distributed on an AS IS BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -24,18 +23,8 @@
 extern "C" {
 #endif
 
-/** \defgroup ns_list Linked list support library.
- *
- * The ns_list.h file provides a doubly-linked list/queue, providing O(1)
- * performance for all insertion/removal operations, and access to either
- * end of the list.
- *
- * See \ref ns_list.h for documentation.
- */
-
 /** \file
- * \ingroup ns_list
- * \brief Linked list support library.
+ * \brief Linked list support library
  *
  * The ns_list.h file provides a doubly-linked list/queue, providing O(1)
  * performance for all insertion/removal operations, and access to either

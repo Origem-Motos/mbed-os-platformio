@@ -55,9 +55,6 @@ protected: // NetworkStack
     virtual nsapi_error_t gethostbyname_async_cancel(int id);
 #endif
 
-    virtual nsapi_error_t setsockopt(nsapi_socket_t handle, int level,
-                                     int optname, const void *optval, unsigned optlen);
-
 protected: // AT_CellularStack
 
     virtual int get_max_socket_count();
@@ -82,9 +79,7 @@ private:
     // URC handler for socket being closed
     void urc_qiurc_closed();
 
-    void handle_open_socket_response(int &modem_connect_id, int &err, bool tlssocket);
-
-    nsapi_error_t set_to_modem_impl(const char *filename, const char *config, const char *data, size_t size);
+    void handle_open_socket_response(int &modem_connect_id, int &err);
 
 #ifdef MBED_CONF_CELLULAR_OFFLOAD_DNS_QUERIES
     // URC handler for DNS query
@@ -94,9 +89,6 @@ private:
     hostbyname_cb_t _dns_callback;
     nsapi_version_t _dns_version;
 #endif
-
-    uint8_t _tls_sec_level;
-
     /** Convert IP address to dotted string representation
      *
      *  BG96 requires consecutive zeros so can't use get_ip_address or ip6tos directly.

@@ -39,8 +39,6 @@ public:
     AT_CellularDevice(FileHandle *fh);
     virtual ~AT_CellularDevice();
 
-    virtual nsapi_error_t clear();
-
     virtual nsapi_error_t hard_power_on();
 
     virtual nsapi_error_t hard_power_off();
@@ -63,9 +61,13 @@ public:
 
     virtual CellularNetwork *open_network(FileHandle *fh = NULL);
 
+    virtual CellularSMS *open_sms(FileHandle *fh = NULL);
+
     virtual CellularInformation *open_information(FileHandle *fh = NULL);
 
     virtual void close_network();
+
+    virtual void close_sms();
 
     virtual void close_information();
 
@@ -115,6 +117,13 @@ public:
      */
     virtual AT_CellularNetwork *open_network_impl(ATHandler &at);
 
+    /** Create new instance of AT_CellularSMS or if overridden, modem specific implementation.
+     *
+     *  @param at   ATHandler reference for communication with the modem.
+     *  @return new instance of class AT_CellularSMS
+     */
+    virtual AT_CellularSMS *open_sms_impl(ATHandler &at);
+
     /** Create new instance of AT_CellularInformation or if overridden, modem specific implementation.
      *
      *  @param at   ATHandler reference for communication with the modem.
@@ -124,26 +133,8 @@ public:
 
     virtual CellularContext *get_context_list() const;
 
-    virtual nsapi_error_t set_baud_rate(int baud_rate);
-
-#if MBED_CONF_CELLULAR_USE_SMS
-    virtual CellularSMS *open_sms(FileHandle *fh = NULL);
-
-    virtual void close_sms();
-
-    /** Create new instance of AT_CellularSMS or if overridden, modem specific implementation.
-     *
-     *  @param at   ATHandler reference for communication with the modem.
-     *  @return new instance of class AT_CellularSMS
-     */
-    virtual AT_CellularSMS *open_sms_impl(ATHandler &at);
-
-    AT_CellularSMS *_sms;
-
-#endif // MBED_CONF_CELLULAR_USE_SMS
-
     AT_CellularNetwork *_network;
-
+    AT_CellularSMS *_sms;
     AT_CellularInformation *_information;
     AT_CellularContext *_context_list;
     int _default_timeout;
@@ -160,7 +151,6 @@ protected:
     // Sets up parameters for AT handler, for now only the send delay and URCs.
     // This kind of routine is needed for initialisation routines that are virtual and therefore cannot be called from constructor.
     void setup_at_handler();
-    virtual nsapi_error_t set_baud_rate_impl(int baud_rate);
 
 private:
     void urc_nw_deact();

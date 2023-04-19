@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2021, Pelion and affiliates.
+ * Copyright (c) 2015-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -89,16 +89,6 @@ typedef struct fhss_configuration {
 typedef int32_t fhss_vendor_defined_cf(const fhss_api_t *api, uint16_t slot, uint8_t eui64[8], uint16_t bsi, uint16_t number_of_channels);
 
 /**
- * \brief Struct fhss_config_parameters defines FHSS configuration parameters.
- *
- */
-typedef struct fhss_config_parameters {
-    /** Number of channel retries defines how many consecutive channels are used when retransmitting a frame after initial transmission channel. */
-    uint8_t number_of_channel_retries;
-} fhss_config_parameters_t;
-
-
-/**
  * \brief Struct fhss_ws_configuration defines configuration of WS FHSS.
  */
 typedef struct fhss_ws_configuration {
@@ -126,20 +116,11 @@ typedef struct fhss_ws_configuration {
     /** Broadcast fixed channel */
     uint8_t broadcast_fixed_channel;
 
-    /** Channel mask. Wi-SUN will use this for broadcast */
+    /** Channel mask. */
     uint32_t channel_mask[8];
-
-    /** Wi-SUN specific unicast channel mask */
-    uint32_t unicast_channel_mask[8];
-
-    /** Channel mask size */
-    uint16_t channel_mask_size;
 
     /** Vendor defined channel function. */
     fhss_vendor_defined_cf *vendor_defined_cf;
-
-    /** Configuration parameters. */
-    fhss_config_parameters_t config_parameters;
 
 } fhss_ws_configuration_t;
 

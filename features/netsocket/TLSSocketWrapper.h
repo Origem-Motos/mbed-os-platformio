@@ -29,25 +29,10 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
-#include "mbedtls/hmac_drbg.h"
 #include "mbedtls/error.h"
 
 // This class requires Mbed TLS SSL/TLS client code
 #if defined(MBEDTLS_SSL_CLI_C) || defined(DOXYGEN_ONLY)
-
-#if defined(MBEDTLS_CTR_DRBG_C)
-#define DRBG_CTX mbedtls_ctr_drbg_context
-#define DRBG_INIT mbedtls_ctr_drbg_init
-#define DRBG_RANDOM mbedtls_ctr_drbg_random
-#define DRBG_FREE mbedtls_ctr_drbg_free
-#elif defined(MBEDTLS_HMAC_DRBG_C)
-#define DRBG_CTX mbedtls_hmac_drbg_context
-#define DRBG_INIT mbedtls_hmac_drbg_init
-#define DRBG_RANDOM mbedtls_hmac_drbg_random
-#define DRBG_FREE mbedtls_hmac_drbg_free
-#else
-#error "CTR or HMAC must be defined for TLSSocketWrapper!"
-#endif
 
 /**
  * TLSSocket is a wrapper around Socket for interacting with TLS servers.
@@ -82,9 +67,6 @@ public:
 
     /** Set hostname.
      *
-     * @note Implementation is inside following defines:
-     * #if defined(MBEDTLS_X509_CRT_PARSE_C) && !defined(MBEDTLS_X509_REMOVE_HOSTNAME_VERIFICATION)
-     *
      * TLSSocket requires hostname used to verify the certificate.
      * If hostname is not given in constructor, this function must be used before
      * starting the TLS handshake.
@@ -99,9 +81,7 @@ public:
      *
      * @param root_ca Root CA Certificate in any Mbed TLS-supported format.
      * @param len     Length of certificate (including terminating 0 for PEM).
-     * @retval NSAPI_ERROR_OK on success.
-     * @retval NSAPI_ERROR_NO_MEMORY in case there is not enough memory to allocate certificate.
-     * @retval NSAPI_ERROR_PARAMETER in case the provided root_ca parameter failed parsing.
+     * @return        0 on success, negative error code on failure.
      */
     nsapi_error_t set_root_ca_cert(const void *root_ca, size_t len);
 
@@ -119,8 +99,7 @@ public:
      * @param client_cert_len Certificate size including the terminating null byte for PEM data.
      * @param client_private_key_pem Client private key in PEM or DER format.
      * @param client_private_key_len Key size including the terminating null byte for PEM data
-     * @retval NSAPI_ERROR_OK on success.
-     * @retval NSAPI_ERROR_PARAMETER in case the provided root_ca parameter failed parsing.
+     * @return   0 on success, negative error code on failure.
      */
     nsapi_error_t set_client_cert_key(const void *client_cert, size_t client_cert_len,
                                       const void *client_private_key_pem, size_t client_private_key_len);
@@ -129,8 +108,7 @@ public:
      *
      * @param client_cert_pem Client certification in PEM format.
      * @param client_private_key_pem Client private key in PEM format.
-     * @retval NSAPI_ERROR_OK on success.
-     * @retval NSAPI_ERROR_PARAMETER in case the provided root_ca parameter failed parsing.
+     * @return   0 on success, negative error code on failure.
      */
     nsapi_error_t set_client_cert_key(const char *client_cert_pem, const char *client_private_key_pem);
 
@@ -141,12 +119,7 @@ public:
      *
      *  @param data     Buffer of data to send to the host.
      *  @param size     Size of the buffer in bytes.
-     *  @retval         int Number of sent bytes on success
-     *  @retval         NSAPI_ERROR_NO_SOCKET in case socket was not created correctly.
-     *  @retval         NSAPI_ERROR_WOULD_BLOCK in case non-blocking mode is enabled
-     *                  and send cannot be performed immediately.
-     *  @retval         NSAPI_ERROR_DEVICE_ERROR in case of tls-related errors.
-     *                  See @ref mbedtls_ssl_write.
+     *  @return         Number of sent bytes on success, negative error code on failure.
      */
     virtual nsapi_error_t send(const void *data, nsapi_size_t size);
 
@@ -157,26 +130,18 @@ public:
      *
      *  @param data     Destination buffer for data received from the host.
      *  @param size     Size of the buffer in bytes.
-     *  @retval         int Number of sent bytes on success
-     *  @retval         NSAPI_ERROR_NO_SOCKET in case socket was not created correctly.
-     *  @retval         NSAPI_ERROR_WOULD_BLOCK in case non-blocking mode is enabled
-     *                  and send cannot be performed immediately.
-     *  @retval         NSAPI_ERROR_DEVICE_ERROR in case of tls-related errors.
-     *                  See @ref mbedtls_ssl_read.
-     *  @return         0 if no data is available to be received
-     *                  and the peer has performed an orderly shutdown.
+     *  @return         Number of received bytes on success, negative error
+     *                  code on failure. If no data is available to be received
+     *                  and the peer has performed an orderly shutdown,
+     *                  recv() returns 0.
      */
     virtual nsapi_size_or_error_t recv(void *data, nsapi_size_t size);
 
     /* = Functions inherited from Socket = */
     virtual nsapi_error_t close();
-    /**
-     *  Connect the transport socket and start handshake.
-     *
+    /*
      *  @note: In case connect() returns an error, the state of the socket is
      *  unspecified. A new socket should be created before reconnecting.
-     *
-     *  See @ref Socket::connect and @ref start_handshake
      */
     virtual nsapi_error_t connect(const SocketAddress &address = SocketAddress());
     virtual nsapi_size_or_error_t sendto(const SocketAddress &address, const void *data, nsapi_size_t size);
@@ -252,11 +217,7 @@ protected:
      *  does not happen twice.
      *
      *  @param        first_call is this a first call to Socket::connect() API.
-     *  @retval       NSAPI_ERROR_OK if we happen to complete the request on the first call.
-     *  @retval       NSAPI_ERROR_IN_PROGRESS if the first call did not complete the request.
-     *  @retval       NSAPI_ERROR_NO_SOCKET in case the transport socket was not created correctly.
-     *  @retval       NSAPI_ERROR_AUTH_FAILURE in case of tls-related authentication errors.
-     *                See @ref mbedtls_ctr_drbg_seed or @ref mbedtls_hmac_drbg_seed, @ref mbedtls_ssl_setup. @ref mbedtls_ssl_handshake.
+     *  @return       0 on success, negative error code on failure
      */
     nsapi_error_t start_handshake(bool first_call);
 
@@ -305,9 +266,7 @@ private:
 #ifdef MBEDTLS_X509_CRT_PARSE_C
     mbedtls_pk_context _pkctx;
 #endif
-
-    DRBG_CTX _drbg;
-
+    mbedtls_ctr_drbg_context _ctr_drbg;
     mbedtls_entropy_context _entropy;
 
     rtos::EventFlags _event_flag;

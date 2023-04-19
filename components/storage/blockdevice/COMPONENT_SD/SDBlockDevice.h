@@ -20,14 +20,13 @@
 /* If the target has no SPI support, then SD Card is not supported. */
 #if DEVICE_SPI
 
-#include "features/storage/blockdevice/BlockDevice.h"
+#include "BlockDevice.h"
 #include "drivers/SPI.h"
 #include "drivers/Timer.h"
 #include "drivers/MbedCRC.h"
 #include "drivers/DigitalOut.h"
 #include "platform/platform.h"
 #include "platform/PlatformMutex.h"
-#include "hal/static_pinmap.h"
 
 /** SDBlockDevice class
  *
@@ -35,7 +34,7 @@
  */
 class SDBlockDevice : public mbed::BlockDevice {
 public:
-    /** Creates an SDBlockDevice on a SPI bus specified by pins (using dynamic pin-map)
+    /** Creates an SDBlockDevice on a SPI bus specified by pins
      *
      *  @param mosi     SPI master out, slave in pin
      *  @param miso     SPI master in, slave out pin
@@ -45,15 +44,6 @@ public:
      *  @param crc_on   Enable cyclic redundancy check (defaults to disabled)
      */
     SDBlockDevice(PinName mosi, PinName miso, PinName sclk, PinName cs, uint64_t hz = 1000000, bool crc_on = 0);
-
-    /** Creates an SDBlockDevice on a SPI bus specified by pins (using static pin-map)
-     *
-     *  @param spi_pinmap Static SPI pin-map
-     *  @param hz         Clock speed of the SPI bus (defaults to 1MHz)
-     *  @param crc_on     Enable cyclic redundancy check (defaults to disabled)
-     */
-    SDBlockDevice(const spi_pinmap_t &spi_pinmap, PinName cs, uint64_t hz = 1000000, bool crc_on = 0);
-
     virtual ~SDBlockDevice();
 
     /** Initialize a block device

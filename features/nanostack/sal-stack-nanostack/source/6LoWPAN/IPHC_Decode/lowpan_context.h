@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, 2020, Pelion and affiliates.
+ * Copyright (c) 2015-2017, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -88,7 +88,7 @@ void lowpan_context_timer(lowpan_context_list_t *list, uint_fast16_t ticks);
  * \return NULL Not supported Context ID
  *
  */
-lowpan_context_t *lowpan_context_get_by_id(const lowpan_context_list_t *list, uint8_t id);
+lowpan_context_t *lowpan_contex_get_by_id(const lowpan_context_list_t *list, uint8_t id);
 
 /**
  * \brief Get Longest match Context entry from the list for given IPv6 address

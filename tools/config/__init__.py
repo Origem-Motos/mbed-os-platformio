@@ -1354,13 +1354,10 @@ class Config(object):
         self.cumulative_overrides['features']\
             .update_target(self.target)
 
-        # Features that don't appear in ALLOWED_FEATURES should be removed
-        # with a warning so that they don't do anything unexpected.
-        # Iterate over a copy of the set to remove them safely.
-        for feature in list(self.target.features):
+        for feature in self.target.features:
             if feature not in ALLOWED_FEATURES:
-                print("[WARNING] Feature '%s' is not a supported feature" % feature)
-                self.target.features.remove(feature)
+                raise ConfigException(
+                    "Feature '%s' is not a supported features" % feature)
 
         return self.target.features
 

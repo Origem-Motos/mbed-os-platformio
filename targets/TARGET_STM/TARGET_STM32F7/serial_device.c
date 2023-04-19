@@ -252,9 +252,8 @@ void serial_clear(serial_t *obj)
     struct serial_s *obj_s = SERIAL_S(obj);
     UART_HandleTypeDef *huart = &uart_handlers[obj_s->index];
 
-    /* Clear RXNE and error flags */
-    volatile uint32_t tmpval __attribute__((unused)) = huart->Instance->RDR;
-    HAL_UART_ErrorCallback(huart);
+    __HAL_UART_CLEAR_IT(huart, UART_FLAG_TXE);
+    __HAL_UART_CLEAR_IT(huart, UART_FLAG_RXNE);
 }
 
 void serial_break_set(serial_t *obj)
@@ -525,6 +524,13 @@ uint8_t serial_rx_active(serial_t *obj)
     return (((HAL_UART_GetState(huart) & HAL_UART_STATE_BUSY_RX) == HAL_UART_STATE_BUSY_RX) ? 1 : 0);
 }
 
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (__HAL_UART_GET_FLAG(huart, UART_FLAG_TC) != RESET) {
+        __HAL_UART_CLEAR_IT(huart, UART_CLEAR_TCF);
+    }
+}
+
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_PE) != RESET) {
@@ -632,6 +638,9 @@ void serial_tx_abort_asynch(serial_t *obj)
 
     __HAL_UART_DISABLE_IT(huart, UART_IT_TC);
     __HAL_UART_DISABLE_IT(huart, UART_IT_TXE);
+
+    // clear flags
+    __HAL_UART_CLEAR_IT(huart, UART_FLAG_TC);
 
     // reset states
     huart->TxXferCount = 0;

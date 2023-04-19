@@ -55,6 +55,7 @@ void UBLOX_AT_CellularStack::UUSORD_URC()
 
     socket = find_socket(a);
     if (socket != NULL) {
+        socket->rx_avail = true;
         socket->pending_bytes = b;
         // No debug prints here as they can affect timing
         // and cause data loss in UARTSerial
@@ -75,6 +76,7 @@ void UBLOX_AT_CellularStack::UUSORF_URC()
 
     socket = find_socket(a);
     if (socket != NULL) {
+        socket->rx_avail = true;
         socket->pending_bytes = b;
         // No debug prints here as they can affect timing
         // and cause data loss in UARTSerial
@@ -351,6 +353,7 @@ nsapi_size_or_error_t UBLOX_AT_CellularStack::socket_recvfrom_impl(CellularSocke
     }
     timer.stop();
 
+    socket->rx_avail = false;
     socket->pending_bytes = 0;
     if (!count || (_at.get_last_error() != NSAPI_ERROR_OK)) {
         return NSAPI_ERROR_WOULD_BLOCK;
@@ -395,6 +398,7 @@ void UBLOX_AT_CellularStack::clear_socket(CellularSocket *socket)
     if (socket != NULL) {
         socket->id = SOCKET_UNUSED;
         socket->started = false;
+        socket->rx_avail = false;
         socket->pending_bytes = 0;
         socket->closed = true;
         if (socket->_cb) {
@@ -443,7 +447,7 @@ nsapi_error_t UBLOX_AT_CellularStack::gethostbyname(const char *host, SocketAddr
     if (address->set_ip_address(host)) {
         err = NSAPI_ERROR_OK;
     } else {
-#ifdef UBX_MDM_SARA_R41XM
+#ifdef TARGET_UBLOX_C030_R41XM
         _at.set_at_timeout(70000);
 #else
         _at.set_at_timeout(120000);

@@ -17,9 +17,9 @@
 #define MBED_SPIF_BLOCK_DEVICE_H
 
 #include "platform/SingletonPtr.h"
-#include "drivers/SPI.h"
-#include "drivers/DigitalOut.h"
-#include "features/storage/blockdevice/BlockDevice.h"
+#include "SPI.h"
+#include "DigitalOut.h"
+#include "BlockDevice.h"
 
 /** Enum spif standard error codes
  *

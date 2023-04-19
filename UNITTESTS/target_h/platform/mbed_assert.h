@@ -50,12 +50,6 @@ void mbed_assert_internal(const char *expr, const char *file, int line);
 }
 #endif
 
-/**
- * For unittests: Global flag to select whether MBED_ASSERT
- * throws error. Default false.
- */
-extern bool mbed_assert_throw_errors;
-
 /** MBED_ASSERT
  *  Declare runtime assertions: results in runtime error if condition is false
  *
@@ -69,12 +63,18 @@ extern bool mbed_assert_throw_errors;
  *  }
  *  @endcode
  */
+#if defined( NDEBUG ) && !defined (MBED_WDOG_ASSERT)
+#define MBED_ASSERT(expr) ((void)0)
+#else
 #define MBED_ASSERT(expr)                                \
 do {                                                     \
     if (!(expr)) {                                       \
         mbed_assert_internal(#expr, __FILE__, __LINE__); \
     }                                                    \
 } while (0)
+#endif
+
+
 
 /** MBED_STATIC_ASSERT
  *  Declare compile-time assertions, results in compile-time error if condition is false

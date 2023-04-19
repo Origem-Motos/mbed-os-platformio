@@ -1,13 +1,5 @@
 /* Linker script to configure memory regions. */
 
-#if !defined(MBED_APP_START)
-  #define MBED_APP_START 0x08000000
-#endif
-
-#if !defined(MBED_APP_SIZE)
-  #define MBED_APP_SIZE 0x80000
-#endif
-
 #if !defined(MBED_BOOT_STACK_SIZE)
     #define MBED_BOOT_STACK_SIZE 0x400
 #endif
@@ -18,7 +10,7 @@ M_CRASH_DATA_RAM_SIZE = 0x100;
 
 MEMORY
 { 
-  FLASH (rx) : ORIGIN = MBED_APP_START, LENGTH = MBED_APP_SIZE
+  FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 512K
   CCM (rwx) : ORIGIN = 0x10000000, LENGTH = 64K
   RAM (rwx) : ORIGIN = 0x20000188, LENGTH = 128k - 0x188 
 }

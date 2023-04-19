@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021, Pelion and affiliates.
+ * Copyright (c) 2018-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,18 +31,15 @@
 #include "6LoWPAN/MAC/mpx_api.h"
 #include "6LoWPAN/ws/ws_config.h"
 #include "6LoWPAN/ws/ws_eapol_pdu.h"
-#include "6LoWPAN/ws/ws_llc.h"
 
 #ifdef HAVE_WS
 
 #define TRACE_GROUP "wsep"
 
 typedef struct {
+    uint8_t handle;
     void *data_ptr;
     void *buffer;
-    ws_eapol_pdu_tx_status *tx_status;
-    uint8_t tx_identifier;
-    uint8_t handle;
     ns_list_link_t link;
 } eapol_pdu_msdu_t;
 
@@ -50,7 +47,6 @@ typedef NS_LIST_HEAD(eapol_pdu_msdu_t, link) eapol_pdu_msdu_list_t;
 
 typedef struct {
     uint8_t priority;
-    bool filter_requsted: 1;
     ws_eapol_pdu_address_check *addr_check;
     ws_eapol_pdu_receive *receive;
     ns_list_link_t link;
@@ -149,7 +145,6 @@ int8_t ws_eapol_pdu_cb_register(protocol_interface_info_entry_t *interface_ptr, 
     new_cb->priority = cb_data->priority;
     new_cb->addr_check = cb_data->addr_check;
     new_cb->receive = cb_data->receive;
-    new_cb->filter_requsted = cb_data->filter_requsted;
 
     ns_list_foreach(eapol_pdu_recv_cb_t, entry, &eapol_pdu_data->recv_cb_list) {
         if (new_cb->priority <= entry->priority) {
@@ -185,7 +180,7 @@ int8_t ws_eapol_pdu_cb_unregister(protocol_interface_info_entry_t *interface_ptr
     return -1;
 }
 
-int8_t ws_eapol_pdu_send_to_mpx(protocol_interface_info_entry_t *interface_ptr, const uint8_t *eui_64, void *data, uint16_t size, void *buffer, ws_eapol_pdu_tx_status *tx_status, uint8_t tx_identifier)
+int8_t ws_eapol_pdu_send_to_mpx(protocol_interface_info_entry_t *interface_ptr, const uint8_t *eui_64, void *data, uint16_t size, void *buffer)
 {
     eapol_pdu_data_t *eapol_pdu_data = ws_eapol_pdu_data_get(interface_ptr);
 
@@ -203,8 +198,6 @@ int8_t ws_eapol_pdu_send_to_mpx(protocol_interface_info_entry_t *interface_ptr, 
     msdu_entry->data_ptr = data;
     msdu_entry->buffer = buffer;
     msdu_entry->handle = eapol_pdu_data->msdu_handle;
-    msdu_entry->tx_status = tx_status;
-    msdu_entry->tx_identifier = tx_identifier;
     ns_list_add_to_start(&eapol_pdu_data->msdu_list, msdu_entry);
 
     memcpy(data_request.DstAddr, eui_64, 8);
@@ -214,19 +207,7 @@ int8_t ws_eapol_pdu_send_to_mpx(protocol_interface_info_entry_t *interface_ptr, 
 
     eapol_pdu_data->msdu_handle++;
 
-    eapol_pdu_data->mpx_api->mpx_data_request(eapol_pdu_data->mpx_api, &data_request, eapol_pdu_data->mpx_user_id, MAC_DATA_NORMAL_PRIORITY);
-    return 0;
-}
-
-int8_t ws_eapol_pdu_mpx_eui64_purge(protocol_interface_info_entry_t *interface_ptr, const uint8_t *eui_64)
-{
-    eapol_pdu_data_t *eapol_pdu_data = ws_eapol_pdu_data_get(interface_ptr);
-    if (!eapol_pdu_data) {
-        return -1;
-    }
-
-    eapol_pdu_data->mpx_api->mpx_eui64_purge(eapol_pdu_data->mpx_api, eui_64);
-
+    eapol_pdu_data->mpx_api->mpx_data_request(eapol_pdu_data->mpx_api, &data_request, eapol_pdu_data->mpx_user_id);
     return 0;
 }
 
@@ -284,18 +265,6 @@ static void ws_eapol_pdu_mpx_data_confirm(const mpx_api_t *api, const struct mcp
 
     ns_list_foreach(eapol_pdu_msdu_t, msdu, &eapol_pdu_data->msdu_list) {
         if (msdu->handle == data->msduHandle) {
-            if (msdu->tx_status) {
-                eapol_pdu_tx_status_e status = EAPOL_PDU_TX_ERR_UNSPEC;
-                if (data->status == MLME_SUCCESS) {
-                    status = EAPOL_PDU_TX_OK;
-                } else if (data->status == MLME_TX_NO_ACK) {
-                    status = EAPOL_PDU_TX_ERR_TX_NO_ACK;
-                    tr_error("EAPOL TX err no ack");
-                } else {
-                    tr_error("EAPOL TX err");
-                }
-                msdu->tx_status(eapol_pdu_data->interface_ptr, status, msdu->tx_identifier);
-            }
             ns_dyn_mem_free(msdu->buffer);
             ns_list_remove(&eapol_pdu_data->msdu_list, msdu);
             ns_dyn_mem_free(msdu);
@@ -325,11 +294,6 @@ static void ws_eapol_pdu_mpx_data_indication(const mpx_api_t *api, const struct 
 
     ns_list_foreach(eapol_pdu_recv_cb_t, entry, &eapol_pdu_data->recv_cb_list) {
         if (entry->addr_check(eapol_pdu_data->interface_ptr, data->SrcAddr) >= 0) {
-            if (entry->filter_requsted && !ws_llc_eapol_relay_forward_filter(eapol_pdu_data->interface_ptr, data->SrcAddr, data->DSN, data->timestamp)) {
-                tr_info("EAPOL relay filter drop");
-                return;
-            }
-
             entry->receive(eapol_pdu_data->interface_ptr, data->SrcAddr, data->msdu_ptr, data->msduLength);
             break;
         }

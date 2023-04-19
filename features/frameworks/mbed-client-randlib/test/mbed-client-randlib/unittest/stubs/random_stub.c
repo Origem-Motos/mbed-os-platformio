@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, 2021, Pelion and affiliates.
+ * Copyright (c) 2016, ARM Limited, All Rights Reserved
  */
 
 #include "ns_types.h"

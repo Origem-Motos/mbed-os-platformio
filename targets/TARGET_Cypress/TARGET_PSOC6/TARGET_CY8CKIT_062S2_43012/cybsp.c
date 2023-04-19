@@ -24,12 +24,9 @@
 *******************************************************************************/
 
 #include <stdlib.h>
-#include "cy_syspm.h"
-#include "cy_sysclk.h"
 #include "cybsp.h"
-#if defined(CY_USING_HAL)
-#include "cyhal_hwmgr.h"
-#endif
+#include "cyhal_utils.h"
+#include "cycfg.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -44,7 +41,7 @@ extern "C" {
     #define CYBSP_SYSCLK_PM_CALLBACK_ORDER  (255u)
 #endif
 
-#if defined(CYBSP_WIFI_CAPABLE) && defined(CY_USING_HAL)
+#if defined(CYBSP_WIFI_CAPABLE)
 static cyhal_sdio_t sdio_obj;
 
 cyhal_sdio_t* cybsp_get_wifi_sdio_obj(void)
@@ -79,22 +76,15 @@ static cy_rslt_t cybsp_register_sysclk_pm_callback(void)
 cy_rslt_t cybsp_init(void)
 {
     /* Setup hardware manager to track resource usage then initialize all system (clock/power) board configuration */
-#if defined(CY_USING_HAL)
     cy_rslt_t result = cyhal_hwmgr_init();
-#else
-    cy_rslt_t result = CY_RSLT_SUCCESS;
-#endif
-
-#if defined(COMPONENT_BSP_DESIGN_MODUS) || defined(COMPONENT_CUSTOM_DESIGN_MODUS)
-    init_cycfg_all();
-#endif
+    init_cycfg_system();
 
     if (CY_RSLT_SUCCESS == result)
     {
         result = cybsp_register_sysclk_pm_callback();
     }
 
-#if defined(CYBSP_WIFI_CAPABLE) && defined(CY_USING_HAL)
+#if defined(CYBSP_WIFI_CAPABLE)
     /* Initialize SDIO interface. This must be done before other HAL API calls as some SDIO implementations require
      * specific peripheral instances.
      * NOTE: The full WiFi interface still needs to be initialized via cybsp_wifi_init_primary(). This is typically 

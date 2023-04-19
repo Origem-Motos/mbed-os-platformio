@@ -62,7 +62,7 @@ void UDPSOCKET_RECV_TIMEOUT()
 
         if (recvd == NSAPI_ERROR_WOULD_BLOCK) {
             osSignalWait(SIGNAL_SIGIO, SIGIO_TIMEOUT);
-            tr_info("MBED: recvfrom() took: %dms", timer.read_ms());
+            printf("MBED: recvfrom() took: %dms\n", timer.read_ms());
             if (timer.read_ms() > 150) {
                 TEST_ASSERT(150 - timer.read_ms() < 51);
             } else {
@@ -70,16 +70,16 @@ void UDPSOCKET_RECV_TIMEOUT()
             }
             continue;
         } else if (recvd < 0) {
-            tr_error("[bt#%02d] network error %d", i, recvd);
+            printf("[bt#%02d] network error %d\n", i, recvd);
             continue;
         } else if (temp_addr != udp_addr) {
-            tr_info("[bt#%02d] packet from wrong address", i);
+            printf("[bt#%02d] packet from wrong address\n", i);
             continue;
         }
         TEST_ASSERT_EQUAL(DATA_LEN, recvd);
         pkt_success++;
     }
 
-    tr_info("MBED: %d out of %d packets were received.", pkt_success, PKT_NUM);
+    printf("MBED: %d out of %d packets were received.\n", pkt_success, PKT_NUM);
     TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, sock.close());
 }

@@ -53,7 +53,7 @@ from tools.utils import print_large_string
 from tools.utils import NotSupportedException
 from tools.options import extract_profile, list_profiles, extract_mcus
 from tools.notifier.term import TerminalNotifier
-from tools.psa import generate_psa_sources
+from tools.psa import generate_psa_sources, clean_psa_autogen
 from tools.resources import OsAndSpeResourceFilter
 
 """ The CLI entry point for exporting projects from the mbed tools to any of the
@@ -380,6 +380,7 @@ def main():
 
         if options.clean:
             clean(options.source_dir)
+            clean_psa_autogen()
 
         ide = resolve_exporter_alias(options.ide)
         exporter, toolchain_name = get_exporter_toolchain(ide)
@@ -390,11 +391,13 @@ def main():
 
         try:
             target = Target.get_target(mcu)
-            resource_filter = None
-            if target.is_PSA_secure_target:
+            if target.is_PSA_target:
                 generate_psa_sources(source_dirs=options.source_dir,
                                      ignore_paths=[]
                 )
+
+            resource_filter = None
+            if target.is_PSA_secure_target:
                 resource_filter = OsAndSpeResourceFilter()
 
             export(

@@ -14,7 +14,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from past.builtins import cmp
 from tools.paths import *
 from argparse import ArgumentTypeError
 from tools.utils import columnate
@@ -858,7 +857,7 @@ except:
     TEST_GROUPS = {}
 GROUPS.update(TEST_GROUPS)
 
-class Test(object):
+class Test:
     DEFAULTS = {
         #'mcu': None,
         'description': None,

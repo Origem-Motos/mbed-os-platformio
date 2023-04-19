@@ -1,16 +1,15 @@
 /*
- * Copyright (c) 2014-2016, 2018, 2020, Pelion and affiliates.
+ * Copyright (c) 2014-2015 ARM Limited. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * Licensed under the Apache License, Version 2.0 (the License); you may
+ * not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * distributed under the License is distributed on an AS IS BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -58,7 +57,7 @@ uint_fast8_t ip6_prefix_tos(const void *prefix, uint_fast8_t prefix_len, char *p
  * IPv4 tunneling addresses are not covered.
  *
  * \param ip6addr IPv6 address in string format.
- * \param len Length of ipv6 string, maximum of 41.
+ * \param len Lenght of ipv6 string, maximum of 41.
  * \param dest buffer for address. MUST be 16 bytes. Filled with 0 on error.
  * \return boolean set to true if conversion succeed, false if it didn't
  */

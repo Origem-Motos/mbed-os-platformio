@@ -22,7 +22,7 @@ import uuid
 from sys import stdout
 from socket import socket, AF_INET, SOCK_DGRAM
 
-class UDPEchoServerTest(object):
+class UDPEchoServerTest():
     ECHO_SERVER_ADDRESS = ""
     ECHO_PORT = 0
     s = None # Socket

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, 2019-2020, Pelion and affiliates.
+ * Copyright (c) 2015-2017, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,13 +24,11 @@
 #include "mbedtls/platform.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/ctr_drbg.h"
-#include "mbedtls/hmac_drbg.h"
 #include "mbedtls/x509_crt.h"
 #include "mbedtls/sha256.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/platform.h"
-#include "mbedtls/md.h"
 
 
 #define HANDSHAKE_FINISHED_VALUE 8888

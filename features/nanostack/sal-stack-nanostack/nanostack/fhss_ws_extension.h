@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2020-2021, Pelion and affiliates.
+ * Copyright (c) 2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,14 +29,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**
- * @brief ws_channel_mask_t WS neighbour supported channel mask
- */
-typedef struct ws_channel_mask {
-    uint16_t channel_count;                     /**<active channels at mask */
-    uint32_t channel_mask[8];                   /**< Supported channels */
-} ws_channel_mask_t;
 
 /**
  * @brief unicast_timing_info Unicast timing/hopping schedule information structure.
@@ -72,7 +64,6 @@ typedef struct fhss_ws_neighbor_timing_info {
     uint8_t timing_accuracy;                    /**< Neighbor timing accuracy */
     unicast_timing_info_t uc_timing_info;       /**< Neighbor unicast timing info */
     broadcast_timing_info_t bc_timing_info;     /**< Neighbor broadcast timing info */
-    ws_channel_mask_t uc_channel_list;          /**< Neighbor Unicast channel list */
     uint32_t *excluded_channels;                /**< Neighbor excluded channels (bit mask) */
 } fhss_ws_neighbor_timing_info_t;
 
@@ -117,27 +108,6 @@ extern int ns_fhss_set_neighbor_info_fp(const fhss_api_t *fhss_api, fhss_get_nei
  * @return 0 on success, -1 on fail.
  */
 extern int ns_fhss_ws_set_hop_count(const fhss_api_t *fhss_api, const uint8_t hop_count);
-
-/**
- * @brief WS TX allowance levels.
- */
-typedef enum {
-    /** Allow transmitting only on TX slots. */
-    WS_TX_SLOT,
-    /** Allow transmitting only on TX and RX slots. */
-    WS_TX_AND_RX_SLOT,
-    /** Allow transmitting always. Also unicast on broadcast channel. */
-    WS_TX_ALWAYS
-} fhss_ws_tx_allow_level;
-
-/**
- * @brief Set node unicast TX allowance level. Allows device to use the unicast and broadcast channel for unicast transmission as described by fhss_ws_tx_allow_level.
- * @param fhss_api FHSS instance.
- * @param global_level Level of TX allowance in normal mode.
- * @param ef_level Level of TX allowance in expedited forwarding mode.
- * @return 0 on success, -1 on fail.
- */
-extern int ns_fhss_ws_set_tx_allowance_level(const fhss_api_t *fhss_api, const fhss_ws_tx_allow_level global_level, const fhss_ws_tx_allow_level ef_level);
 
 #ifdef __cplusplus
 }

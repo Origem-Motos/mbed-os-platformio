@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020, Pelion and affiliates.
+ * Copyright (c) 2016-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -162,13 +162,11 @@ int8_t sec_prot_lib_mic_validate(uint8_t *ptk, uint8_t *mic, uint8_t *pdu, uint8
  * \param prot security protocol
  * \param pmkid PMK ID
  * \param is_auth set for authenticator
- * \param alt_remote_eui64_use use alternative remote EUI-64 if available
- * \param used_remote_eui64 remote EUI-64 used on PMKID generation
  *
  * \return < 0 failure
  * \return >= 0 success
  */
-int8_t sec_prot_lib_pmkid_generate(sec_prot_t *prot, uint8_t *pmkid, bool is_auth, bool alt_remote_eui64_use, uint8_t *used_remote_eui64);
+int8_t sec_prot_lib_pmkid_generate(sec_prot_t *prot, uint8_t *pmkid, bool is_auth);
 
 /**
  *  sec_prot_lib_ptkid_generate generate PTK ID from PTK

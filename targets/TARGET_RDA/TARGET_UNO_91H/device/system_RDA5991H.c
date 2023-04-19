@@ -173,10 +173,7 @@ void SystemInit (void)
 #if ((__FPU_PRESENT == 1) && (__FPU_USED == 1))
     SCB->CPACR |= ((3UL << 10*2) | (3UL << 11*2));    /* set CP10, CP11 Full Access */
 #endif /* ((__FPU_PRESENT == 1) && (__FPU_USED == 1)) */
-#ifndef APPLICATION_ADDR
-#define APPLICATION_ADDR RDA_CODE_BASE	/* vector table in flash, add support for bootloader jump  */
-#endif
-    SCB->VTOR = APPLICATION_ADDR;
+    SCB->VTOR  = RDA_CODE_BASE;                       /* vector table in flash      */
     NVIC_SetPriorityGrouping(0x06);                   /* 1 bit for pre-emption pri  */
 
     __enable_irq();

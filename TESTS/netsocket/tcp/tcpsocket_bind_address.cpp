@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-#if defined(MBED_CONF_RTOS_PRESENT)
 #include "greentea-client/test_env.h"
 #include "mbed.h"
 #include "tcp_tests.h"
@@ -34,9 +33,7 @@ void TCPSOCKET_BIND_ADDRESS()
         return;
     }
     TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, sock->open(NetworkInterface::get_default_instance()));
-    SocketAddress sockAddr;
-    NetworkInterface::get_default_instance()->get_ip_address(&sockAddr);
-    sockAddr.set_port(80);
+    SocketAddress sockAddr = SocketAddress(NetworkInterface::get_default_instance()->get_ip_address(), 80);
     nsapi_error_t bind_result = sock->bind(sockAddr);
     if (bind_result == NSAPI_ERROR_UNSUPPORTED) {
         TEST_IGNORE_MESSAGE("bind() not supported");
@@ -46,4 +43,3 @@ void TCPSOCKET_BIND_ADDRESS()
 
     delete sock;
 }
-#endif // defined(MBED_CONF_RTOS_PRESENT)

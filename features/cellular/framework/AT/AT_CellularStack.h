@@ -43,9 +43,6 @@ public:
 
 public: // NetworkStack
 
-    virtual nsapi_error_t get_ip_address(SocketAddress *address);
-
-    MBED_DEPRECATED_SINCE("mbed-os-5.15", "String-based APIs are deprecated")
     virtual const char *get_ip_address();
 
     /**
@@ -112,7 +109,7 @@ protected:
             closed(false),
             started(false),
             tx_ready(false),
-            tls_socket(false),
+            rx_avail(false),
             pending_bytes(0)
         {
         }
@@ -129,7 +126,7 @@ protected:
         bool closed; // socket has been closed by a peer
         bool started; // socket has been opened on modem stack
         bool tx_ready; // socket is ready for sending on modem stack
-        bool tls_socket; // socket uses modem's internal TLS socket functionality
+        bool rx_avail; // socket has data for reading on modem stack
         nsapi_size_t pending_bytes; // The number of received bytes pending
     };
 

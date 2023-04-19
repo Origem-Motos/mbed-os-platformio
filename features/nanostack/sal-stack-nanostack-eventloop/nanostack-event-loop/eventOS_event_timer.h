@@ -1,16 +1,15 @@
 /*
- * Copyright (c) 2014-2015, 2017, 2020, Pelion and affiliates.
+ * Copyright (c) 2014-2015 ARM Limited. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * Licensed under the Apache License, Version 2.0 (the License); you may
+ * not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * distributed under the License is distributed on an AS IS BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
@@ -19,14 +18,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**
- * \file eventOS_event_timer.h
- * \ingroup nanostack-eventloop
- * \brief Functions for sending delayed events.
- */
-
-
 #include "ns_types.h"
 #include "eventOS_event.h"
 
@@ -217,8 +208,9 @@ extern int8_t eventOS_event_timer_cancel(uint8_t event_id, int8_t tasklet_id);
 /**
  * System Timer shortest time in milli seconds
  *
- * \return zero, if no timers are active.
- * \return time in milliseconds to next timer event.
+ * \param ticks Time in 10 ms resolution
+ *
+ * \return none
  *
  * */
 extern uint32_t eventOS_event_timer_shortest_active_timer(void);

@@ -15,11 +15,8 @@
  */
 
 #include "EMACInterface.h"
-#include "mbed-trace/mbed_trace.h"
 
 using namespace mbed;
-
-#define TRACE_GROUP "EMACi"
 
 /* Interface implementation */
 EMACInterface::EMACInterface(EMAC &emac, OnboardNetworkStack &stack) :
@@ -28,7 +25,6 @@ EMACInterface::EMACInterface(EMAC &emac, OnboardNetworkStack &stack) :
     _interface(NULL),
     _dhcp(true),
     _blocking(true),
-    _hw_mac_addr_set(false),
     _ip_address(),
     _netmask(),
     _gateway()
@@ -49,20 +45,6 @@ nsapi_error_t EMACInterface::set_network(const char *ip_address, const char *net
     return NSAPI_ERROR_OK;
 }
 
-nsapi_error_t EMACInterface::set_network(const SocketAddress &ip_address, const SocketAddress &netmask, const SocketAddress &gateway)
-{
-    _dhcp = false;
-
-    strncpy(_ip_address, ip_address.get_ip_address() ? ip_address.get_ip_address() : "", sizeof(_ip_address));
-    _ip_address[sizeof(_ip_address) - 1] = '\0';
-    strncpy(_netmask, netmask.get_ip_address() ? netmask.get_ip_address() : "", sizeof(_netmask));
-    _netmask[sizeof(_netmask) - 1] = '\0';
-    strncpy(_gateway, gateway.get_ip_address() ? gateway.get_ip_address() : "", sizeof(_gateway));
-    _gateway[sizeof(_gateway) - 1] = '\0';
-
-    return NSAPI_ERROR_OK;
-}
-
 nsapi_error_t EMACInterface::set_dhcp(bool dhcp)
 {
     _dhcp = dhcp;
@@ -72,19 +54,7 @@ nsapi_error_t EMACInterface::set_dhcp(bool dhcp)
 nsapi_error_t EMACInterface::connect()
 {
     if (!_interface) {
-        nsapi_error_t err = NSAPI_ERROR_UNSUPPORTED;
-
-        if (_hw_mac_addr_set) {
-            err = _stack.add_ethernet_interface(_emac, true, &_interface, _hw_mac_addr);
-            if (err == NSAPI_ERROR_UNSUPPORTED) {
-                tr_error("Failed to set user MAC address");
-            }
-        }
-
-        if (err == NSAPI_ERROR_UNSUPPORTED) {
-            err = _stack.add_ethernet_interface(_emac, true, &_interface);
-        }
-
+        nsapi_error_t err = _stack.add_ethernet_interface(_emac, true, &_interface);
         if (err != NSAPI_ERROR_OK) {
             _interface = NULL;
             return err;
@@ -113,34 +83,7 @@ const char *EMACInterface::get_mac_address()
     if (_interface && _interface->get_mac_address(_mac_address, sizeof(_mac_address))) {
         return _mac_address;
     }
-    return nullptr;
-}
-
-nsapi_error_t EMACInterface::set_mac_address(uint8_t *mac_addr, nsapi_size_t addr_len)
-{
-    if (!mac_addr || addr_len != NSAPI_MAC_BYTES) {
-        return NSAPI_ERROR_PARAMETER;
-    }
-
-    if (_interface) {
-        // can't set MAC address once initialized
-        return NSAPI_ERROR_BUSY;
-    }
-
-    memcpy(_hw_mac_addr, mac_addr, addr_len);
-    _hw_mac_addr_set = true;
-
-    return NSAPI_ERROR_OK;
-}
-
-nsapi_error_t EMACInterface::get_ip_address(SocketAddress *address)
-{
-    if (_interface && _interface->get_ip_address(address) == NSAPI_ERROR_OK) {
-        strncpy(_ip_address, address->get_ip_address(), sizeof(_ip_address));
-        return NSAPI_ERROR_OK;
-    }
-
-    return NSAPI_ERROR_NO_CONNECTION;
+    return NULL;
 }
 
 const char *EMACInterface::get_ip_address()
@@ -148,26 +91,8 @@ const char *EMACInterface::get_ip_address()
     if (_interface && _interface->get_ip_address(_ip_address, sizeof(_ip_address))) {
         return _ip_address;
     }
-    return nullptr;
-}
 
-nsapi_error_t EMACInterface::get_ipv6_link_local_address(SocketAddress *address)
-{
-    if (_interface) {
-        return _interface->get_ipv6_link_local_address(address);
-    }
-
-    return NSAPI_ERROR_NO_CONNECTION;
-}
-
-nsapi_error_t EMACInterface::get_netmask(SocketAddress *address)
-{
-    if (_interface && _interface->get_netmask(address) == NSAPI_ERROR_OK) {
-        strncpy(_netmask, address->get_ip_address(), sizeof(_netmask));
-        return NSAPI_ERROR_OK;
-    }
-
-    return NSAPI_ERROR_NO_CONNECTION;
+    return NULL;
 }
 
 const char *EMACInterface::get_netmask()
@@ -175,18 +100,8 @@ const char *EMACInterface::get_netmask()
     if (_interface && _interface->get_netmask(_netmask, sizeof(_netmask))) {
         return _netmask;
     }
-    return nullptr;
-}
 
-nsapi_error_t EMACInterface::get_gateway(SocketAddress *address)
-{
-    if (_interface && _interface->get_gateway(address) == NSAPI_ERROR_OK) {
-        strncpy(_gateway, address->get_ip_address(), sizeof(_gateway));
-        address->set_ip_address(_gateway);
-        return NSAPI_ERROR_OK;
-    }
-
-    return NSAPI_ERROR_NO_CONNECTION;
+    return 0;
 }
 
 const char *EMACInterface::get_gateway()
@@ -194,7 +109,8 @@ const char *EMACInterface::get_gateway()
     if (_interface && _interface->get_gateway(_gateway, sizeof(_gateway))) {
         return _gateway;
     }
-    return nullptr;
+
+    return 0;
 }
 
 char *EMACInterface::get_interface_name(char *interface_name)

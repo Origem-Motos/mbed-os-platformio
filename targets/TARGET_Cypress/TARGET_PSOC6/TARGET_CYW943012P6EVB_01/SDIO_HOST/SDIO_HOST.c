@@ -6,7 +6,7 @@
 *
 ********************************************************************************
 * \copyright
-* Copyright 2016-2020 Cypress Semiconductor Corporation
+* Copyright 2016-2019 Cypress Semiconductor Corporation
 * SPDX-License-Identifier: Apache-2.0
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +23,6 @@
 *******************************************************************************/
 
 #include "SDIO_HOST.h"
-#include "cy_utils.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -93,25 +92,14 @@ static void SDIO_RestoreConfig(void);
 *
 * Callback executed during Deep Sleep entry/exit
 *
-* \param params
-* Pointer to structure that holds callback parameters for this driver.
-*
-* \param mode
-* The state transition mode that is currently happening.
-*
 * \note
 * Saves/Restores SDIO UDB registers
-*
-* \return
-* CY_SYSPM_SUCCESS if the transition was successful, otherwise CY_SYSPM_FAIL
-*
 *******************************************************************************/
 cy_en_syspm_status_t SDIO_DeepSleepCallback(cy_stc_syspm_callback_params_t *params, cy_en_syspm_callback_mode_t mode)
 {
-    CY_UNUSED_PARAMETER(params);
     cy_en_syspm_status_t status = CY_SYSPM_FAIL;
 
-    switch (mode)
+    switch (mode) 
     {
         case CY_SYSPM_CHECK_READY:
         case CY_SYSPM_CHECK_FAIL:
@@ -370,7 +358,7 @@ en_sdio_result_t SDIO_GetResponse(uint8_t bCmdIndexCheck, uint8_t bCmdCrcCheck, 
 * Configure the data channel for a data transfer. For a write this doesn't start
 * the write, that must be done separately after the response is received.
 *
-* \param pstcDataConfig
+* \param stc_sdio_data_config_t
 * Data configuration structure. See \ref stc_sdio_data_config_t
 *
 *
@@ -656,7 +644,7 @@ en_sdio_result_t SDIO_SendCommandAndWait(stc_sdio_cmd_t *pstcCmd)
     cy_rslt_t result;
 
     /* Initialize the semaphore. This is not done in init because init is called
-    * in interrupt thread. cy_rtos_init_semaphore call is prohibited in
+    * in interrupt thread. cy_rtos_init_semaphore call is prohibited in 
     * interrupt thread.
     */
     if(!sema_initialized)
@@ -722,6 +710,7 @@ en_sdio_result_t SDIO_SendCommandAndWait(stc_sdio_cmd_t *pstcCmd)
     /*Wait for the command to finish*/
     do
     {
+        //TODO: Use RTOS timeout
         u32CmdTimeout++;
         enRetTmp = SDIO_CheckForEvent(SdCmdEventCmdDone);
 
@@ -770,16 +759,16 @@ en_sdio_result_t SDIO_SendCommandAndWait(stc_sdio_cmd_t *pstcCmd)
 
                     #ifdef CY_RTOS_AWARE
                         /* Wait for the transfer to finish.
-                        *  Acquire semaphore and wait until it will be released
+                        *  Acquire semaphore and wait until it will be released 
                         *  in SDIO_IRQ:
-                        *  1. sdio_transfer_finished_semaphore count is equal to
-                        *     zero. cy_rtos_get_semaphore waits until semaphore
-                        *     count is increased by cy_rtos_set_semaphore() in
+                        *  1. sdio_transfer_finished_semaphore count is equal to 
+                        *     zero. cy_rtos_get_semaphore waits until semaphore 
+                        *     count is increased by cy_rtos_set_semaphore() in 
                         *     SDIO_IRQ.
-                        *  2. The cy_rtos_set_semaphore() increases
+                        *  2. The cy_rtos_set_semaphore() increases 
                         *     sdio_transfer_finished_semaphore count.
-                        *  3. The cy_rtos_get_semaphore() function decreases
-                        *     sdio_transfer_finished_semaphore back to zero
+                        *  3. The cy_rtos_get_semaphore() function decreases 
+                        *     sdio_transfer_finished_semaphore back to zero 
                         *     and exit. Or timeout occurs
                         */
                         result = cy_rtos_get_semaphore( &sdio_transfer_finished_semaphore, 10, false );
@@ -997,7 +986,7 @@ void SDIO_SetBlockSize(uint8_t u8ByteCount)
 *
 * Sets the number of blocks to send
 *
-* \param u8BlockCount
+* \param u8ByteCount
 * Size of the block
 *
 *******************************************************************************/
@@ -1080,12 +1069,7 @@ void SDIO_DisableSdClk(void)
 void SDIO_SetSdClkFrequency(uint32_t u32SdClkFreqHz)
 {
     uint16_t u16Div;
-    /*
-     * The UDB SDIO implemenation has a extra divider internally that divides the input clock to the UDB
-     * by 2. The desired clock frequency is hence intentionally multiplied by 2 in order to get the required
-     * SDIO operating frequency.
-     */
-    u16Div = Cy_SysClk_ClkPeriGetFrequency() / (2 * u32SdClkFreqHz);
+    u16Div = Cy_SysClk_ClkPeriGetFrequency() / u32SdClkFreqHz;
     Cy_SysClk_PeriphSetDivider(SDIO_HOST_Internal_Clock_DIV_TYPE, SDIO_HOST_Internal_Clock_DIV_NUM, (u16Div-1));
 }
 
@@ -1252,10 +1236,10 @@ void SDIO_IRQ(void)
     {
         pfnCardInt_count++;
     }
-
+    
     /* Execute card interrupt callback if neccesary */
     if (0 != pfnCardInt_count)
-    {
+    {        
         if (NULL != gstcInternalData.pstcCallBacks.pfnCardIntCb)
         {
             gstcInternalData.pstcCallBacks.pfnCardIntCb();
@@ -1282,7 +1266,7 @@ void SDIO_IRQ(void)
             /* CRC was bad, set the flag */
             gstcInternalData.stcEvents.u8CRCError++;
         }
-
+        
         /* Set the done flag */
 
     #ifdef CY_RTOS_AWARE
@@ -1316,14 +1300,6 @@ void SDIO_IRQ(void)
 }
 
 
-/*******************************************************************************
-* Function Name: SDIO_READ_DMA_IRQ
-****************************************************************************//**
-*
-* SDIO DMA Read interrupt, checks counts and toggles to other descriptor if
-* needed
-*
-*******************************************************************************/
 void SDIO_READ_DMA_IRQ(void)
 {
     /*Shouldn't have to change anything unless it is the last descriptor*/
@@ -1386,14 +1362,6 @@ void SDIO_READ_DMA_IRQ(void)
     yCounts--;
 }
 
-/*******************************************************************************
-* Function Name: SDIO_WRITE_DMA_IRQ
-****************************************************************************//**
-*
-* SDIO DMA Write interrupt, checks counts and toggles to other descriptor if
-* needed
-*
-*******************************************************************************/
 void SDIO_WRITE_DMA_IRQ(void)
 {
     /*We shouldn't have to change anything unless it is the last descriptor*/
@@ -1455,13 +1423,6 @@ void SDIO_WRITE_DMA_IRQ(void)
     yCounts--;
 }
 
-/*******************************************************************************
-* Function Name: SDIO_Free
-****************************************************************************//**
-*
-* Frees any system resources that were allocated by the SDIO driver.
-*
-*******************************************************************************/
 void SDIO_Free(void)
 {
 #ifdef CY_RTOS_AWARE
