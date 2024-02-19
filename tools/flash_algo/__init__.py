@@ -30,13 +30,14 @@ import jinja2
 from collections import namedtuple
 from itertools import count
 
-from elftools.common.py3compat import bytes2str
+# NOTE: Danilo replaced this to avoid conflict with py3compat 0.3 in platformio
+# from elftools.common.py3compat import bytes2str
+from tools.origem.common.py3compat import bytes2str
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
-
 
 def main():
     parser = argparse.ArgumentParser(description="Algo Extracter")
