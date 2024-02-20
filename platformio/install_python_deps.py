@@ -37,7 +37,7 @@ def build_packages():
         "pyelftools>=0.27,<1",
         "beautifulsoup4==4.7.1",
         "fuzzywuzzy==0.17.0",
-        "future==0.17.1",
+        "future>=0.18.0",
         "prettytable==0.7.2",
         "jsonschema==2.6.0",
         "six==1.12.0"
