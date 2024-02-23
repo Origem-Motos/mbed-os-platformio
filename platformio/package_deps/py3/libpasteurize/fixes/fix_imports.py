@@ -16,6 +16,7 @@ MAPPING = {u"reprlib": u"repr",
            u"winreg": u"_winreg",
            u"configparser": u"ConfigParser",
            u"copyreg": u"copy_reg",
+           u"multiprocessing.SimpleQueue": u"multiprocessing.queues.SimpleQueue",
            u"queue": u"Queue",
            u"socketserver": u"SocketServer",
            u"_markupbase": u"markupbase",
@@ -110,4 +111,3 @@ class FixImports(fixer_base.BaseFix):
 
     def transform(self, node, results):
         touch_import_top(u'future', u'standard_library', node)
-

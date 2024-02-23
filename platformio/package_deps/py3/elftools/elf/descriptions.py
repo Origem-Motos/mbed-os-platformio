@@ -10,10 +10,11 @@ from .enums import (
     ENUM_D_TAG, ENUM_E_VERSION, ENUM_P_TYPE_BASE, ENUM_SH_TYPE_BASE,
     ENUM_RELOC_TYPE_i386, ENUM_RELOC_TYPE_x64,
     ENUM_RELOC_TYPE_ARM, ENUM_RELOC_TYPE_AARCH64, ENUM_RELOC_TYPE_PPC64,
-    ENUM_RELOC_TYPE_MIPS, ENUM_ATTR_TAG_ARM, ENUM_DT_FLAGS, ENUM_DT_FLAGS_1)
+    ENUM_RELOC_TYPE_MIPS, ENUM_ATTR_TAG_ARM, ENUM_ATTR_TAG_RISCV,
+    ENUM_RELOC_TYPE_LOONGARCH, ENUM_DT_FLAGS, ENUM_DT_FLAGS_1)
 from .constants import (
     P_FLAGS, RH_FLAGS, SH_FLAGS, SUNW_SYMINFO_FLAGS, VER_FLAGS)
-from ..common.py3compat import bytes2hex, iteritems
+from ..common.utils import bytes2hex
 
 
 def describe_ei_class(x):
@@ -151,6 +152,8 @@ def describe_reloc_type(x, elffile):
         return _DESCR_RELOC_TYPE_PPC64.get(x, _unknown)
     elif arch == 'MIPS':
         return _DESCR_RELOC_TYPE_MIPS.get(x, _unknown)
+    elif arch == 'LoongArch':
+        return _DESCR_RELOC_TYPE_LOONGARCH.get(x, _unknown)
     else:
         return 'unrecognized: %-7x' % (x & 0xFFFFFFFF)
 
@@ -250,6 +253,19 @@ def describe_attr_tag_arm(tag, val, extra):
 
     else:
         return _DESCR_ATTR_TAG_ARM[tag] + d_entry[val]
+
+def describe_attr_tag_riscv(tag, val, extra):
+    idx = ENUM_ATTR_TAG_RISCV[tag] - 1
+    d_entry = _DESCR_ATTR_VAL_RISCV[idx]
+
+    if d_entry is None:
+        s = _DESCR_ATTR_TAG_RISCV[tag]
+        s += '"%s"' % val if val else ''
+        return s
+
+    else:
+        return _DESCR_ATTR_TAG_RISCV[tag] + d_entry[val]
+
 
 
 def describe_note_gnu_property_x86_feature_1(value):
@@ -389,6 +405,8 @@ _DESCR_E_MACHINE = dict(
     EM_BLACKFIN='Analog Devices Blackfin',
     EM_PPC='PowerPC',
     EM_PPC64='PowerPC64',
+    EM_RISCV='RISC-V',
+    EM_LOONGARCH='LoongArch',
     RESERVED='RESERVED',
 )
 
@@ -410,7 +428,8 @@ _DESCR_P_TYPE = dict(
     PT_AARCH64_ARCHEXT='AARCH64_ARCHEXT',
     PT_AARCH64_UNWIND='AARCH64_UNWIND',
     PT_TLS='TLS',
-    PT_MIPS_ABIFLAGS='ABIFLAGS'
+    PT_MIPS_ABIFLAGS='ABIFLAGS',
+    PT_RISCV_ATTRIBUTES='RISCV_ATTRIBUT',
 )
 
 
@@ -450,6 +469,7 @@ _DESCR_SH_TYPE = dict(
     SHT_ARM_PREEMPTMAP='ARM_PREEMPTMAP',
     SHT_ARM_ATTRIBUTES='ARM_ATTRIBUTES',
     SHT_ARM_DEBUGOVERLAY='ARM_DEBUGOVERLAY',
+    SHT_RISCV_ATTRIBUTES='RISCV_ATTRIBUTES',
     SHT_MIPS_LIBLIST='MIPS_LIBLIST',
     SHT_MIPS_DEBUG='MIPS_DEBUG',
     SHT_MIPS_REGINFO='MIPS_REGINFO',
@@ -660,7 +680,7 @@ def _reverse_dict(d, low_priority=()):
     not override any other entries of the same value.
     """
     out = {}
-    for k, v in iteritems(d):
+    for k, v in d.items():
         if v in out and k in low_priority:
             continue
         out[v] = k
@@ -672,6 +692,7 @@ _DESCR_RELOC_TYPE_ARM = _reverse_dict(ENUM_RELOC_TYPE_ARM)
 _DESCR_RELOC_TYPE_AARCH64 = _reverse_dict(ENUM_RELOC_TYPE_AARCH64)
 _DESCR_RELOC_TYPE_PPC64 = _reverse_dict(ENUM_RELOC_TYPE_PPC64)
 _DESCR_RELOC_TYPE_MIPS = _reverse_dict(ENUM_RELOC_TYPE_MIPS)
+_DESCR_RELOC_TYPE_LOONGARCH = _reverse_dict(ENUM_RELOC_TYPE_LOONGARCH)
 
 _low_priority_D_TAG = (
     # these are 'meta-tags' marking semantics of numeric ranges of the enum
@@ -730,7 +751,6 @@ _DESCR_ATTR_TAG_ARM = dict(
     TAG_VIRTUALIZATION_USE='Tag_Virtualization_use: ',
     TAG_MPEXTENSION_USE_OLD='Tag_MPextension_use_old: ',
 )
-
 
 _DESCR_ATTR_VAL_ARM = [
     None, #1
@@ -980,6 +1000,30 @@ _DESCR_ATTR_VAL_ARM = [
     },
     None, #69
     { #70 TAG_MPEXTENSION_USE_OLD
+        0: 'Not Allowed',
+        1: 'Allowed',
+    },
+]
+
+_DESCR_ATTR_TAG_RISCV = dict(
+    TAG_FILE='File Attributes',
+    TAG_SECTION='Section Attributes:',
+    TAG_SYMBOL='Symbol Attributes:',
+    TAG_STACK_ALIGN='Tag_RISCV_stack_align: ',
+    TAG_ARCH='Tag_RISCV_arch: ',
+    TAG_UNALIGNED='Tag_RISCV_unaligned_access: ',
+)
+
+_DESCR_ATTR_VAL_RISCV = [
+    None, #1
+    None, #2
+    None, #3
+    { #4 TAG_RISCV_stack_align
+        4: '4-bytes',
+        16: '16-bytes',
+    },
+    None, #5 TAG_RISCV_arch
+    { #6 TAG_RISCV_unaligned_access
         0: 'Not Allowed',
         1: 'Allowed',
     },

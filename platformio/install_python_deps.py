@@ -34,13 +34,14 @@ def build_packages():
     packages = (
         "intelhex==2.3.0",
         "jinja2>=2.10.1,<2.11",
-        "pyelftools>=0.27,<1",
+        "pyelftools>=0.30",
         "beautifulsoup4==4.7.1",
         "fuzzywuzzy==0.17.0",
         "future>=0.18.0",
         "prettytable==0.7.2",
         "jsonschema==2.6.0",
-        "six==1.12.0"
+        "six==1.12.0",
+        "markupsafe==2.0.1"
     )
 
     target_dir = join(

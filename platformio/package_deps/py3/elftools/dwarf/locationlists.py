@@ -46,7 +46,7 @@ class LocationListsPair(object):
         """
         if die is None:
             raise DWARFError("For this binary, \"die\" needs to be provided")
-        section = self._loclists if die.cu.version >= 5 else self._loc
+        section = self._loclists if die.cu.header.version >= 5 else self._loc
         return section.get_location_list_at_offset(offset, die)
 
     def iter_location_lists(self):
@@ -92,6 +92,8 @@ class LocationLists(object):
         Passing the die is only neccessary in DWARF5+, for decoding
         location entry encodings that contain references to other sections.
         """
+        if self.version >= 5 and die is None:
+            raise DWARFError("For this binary, \"die\" needs to be provided")              
         self.stream.seek(offset, os.SEEK_SET)
         return self._parse_location_list_from_stream_v5(die.cu) if self.version >= 5 else self._parse_location_list_from_stream()
 

@@ -17,7 +17,7 @@ And then these normal Py3 imports work on both Py3 and Py2::
     import socketserver
     import winreg    # on Windows only
     import test.support
-    import html, html.parser, html.entites
+    import html, html.parser, html.entities
     import http, http.client, http.server
     import http.cookies, http.cookiejar
     import urllib.parse, urllib.request, urllib.response, urllib.error, urllib.robotparser
@@ -30,9 +30,10 @@ And then these normal Py3 imports work on both Py3 and Py2::
     from itertools import filterfalse, zip_longest
     from sys import intern
     from collections import UserDict, UserList, UserString
-    from collections import OrderedDict, Counter     # even on Py2.6
+    from collections import OrderedDict, Counter, ChainMap     # even on Py2.6
     from subprocess import getoutput, getstatusoutput
     from subprocess import check_output              # even on Py2.6
+    from multiprocessing import SimpleQueue
 
 (The renamed modules and functions are still available under their old
 names on Python 2.)
@@ -62,9 +63,12 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 import logging
-import imp
+# imp was deprecated in python 3.6
+if sys.version_info >= (3, 6):
+    import importlib as imp
+else:
+    import imp
 import contextlib
-import types
 import copy
 import os
 
@@ -108,6 +112,7 @@ RENAMES = {
            'future.moves.socketserver': 'socketserver',
            'ConfigParser': 'configparser',
            'repr': 'reprlib',
+           'multiprocessing.queues': 'multiprocessing',
            # 'FileDialog': 'tkinter.filedialog',
            # 'tkFileDialog': 'tkinter.filedialog',
            # 'SimpleDialog': 'tkinter.simpledialog',
@@ -125,7 +130,7 @@ RENAMES = {
            # 'Tkinter': 'tkinter',
            '_winreg': 'winreg',
            'thread': '_thread',
-           'dummy_thread': '_dummy_thread',
+           'dummy_thread': '_dummy_thread' if sys.version_info < (3, 9) else '_thread',
            # 'anydbm': 'dbm',   # causes infinite import loop
            # 'whichdb': 'dbm',  # causes infinite import loop
            # anydbm and whichdb are handled by fix_imports2
@@ -180,9 +185,11 @@ assert len(set(RENAMES.values()) & set(REPLACED_MODULES)) == 0
 MOVES = [('collections', 'UserList', 'UserList', 'UserList'),
          ('collections', 'UserDict', 'UserDict', 'UserDict'),
          ('collections', 'UserString','UserString', 'UserString'),
+         ('collections', 'ChainMap', 'future.backports.misc', 'ChainMap'),
          ('itertools', 'filterfalse','itertools', 'ifilterfalse'),
          ('itertools', 'zip_longest','itertools', 'izip_longest'),
          ('sys', 'intern','__builtin__', 'intern'),
+         ('multiprocessing', 'SimpleQueue', 'multiprocessing.queues', 'SimpleQueue'),
          # The re module has no ASCII flag in Py2, but this is the default.
          # Set re.ASCII to a zero constant. stat.ST_MODE just happens to be one
          # (and it exists on Py2.6+).
@@ -195,6 +202,7 @@ MOVES = [('collections', 'UserList', 'UserList', 'UserList'),
          ('math', 'ceil', 'future.backports.misc', 'ceil'),
          ('collections', 'OrderedDict', 'future.backports.misc', 'OrderedDict'),
          ('collections', 'Counter', 'future.backports.misc', 'Counter'),
+         ('collections', 'ChainMap', 'future.backports.misc', 'ChainMap'),
          ('itertools', 'count', 'future.backports.misc', 'count'),
          ('reprlib', 'recursive_repr', 'future.backports.misc', 'recursive_repr'),
          ('functools', 'cmp_to_key', 'future.backports.misc', 'cmp_to_key'),
@@ -396,7 +404,7 @@ def scrub_future_sys_modules():
     """
     Deprecated.
     """
-    return {}    
+    return {}
 
 class suspend_hooks(object):
     """

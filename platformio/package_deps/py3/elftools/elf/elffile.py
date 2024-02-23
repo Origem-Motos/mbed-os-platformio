@@ -7,6 +7,7 @@
 # This code is in the public domain
 #-------------------------------------------------------------------------------
 import io
+from io import BytesIO
 import os
 import struct
 import zlib
@@ -23,14 +24,13 @@ except ImportError:
         # Jython
         PAGESIZE = 4096
 
-from ..common.py3compat import BytesIO
 from ..common.exceptions import ELFError, ELFParseError
 from ..common.utils import struct_parse, elf_assert
 from .structs import ELFStructs
 from .sections import (
         Section, StringTableSection, SymbolTableSection,
         SymbolTableIndexSection, SUNWSyminfoTableSection, NullSection,
-        NoteSection, StabSection, ARMAttributesSection)
+        NoteSection, StabSection, ARMAttributesSection, RISCVAttributesSection)
 from .dynamic import DynamicSection, DynamicSegment
 from .relocation import (RelocationSection, RelocationHandler,
         RelrRelocationSection)
@@ -533,6 +533,7 @@ class ELFFile(object):
             'EM_RISCV'         : 'RISC-V',
             'EM_BPF'           : 'Linux BPF - in-kernel virtual machine',
             'EM_CSKY'          : 'C-SKY',
+            'EM_LOONGARCH'     : 'LoongArch',
             'EM_FRV'           : 'Fujitsu FR-V'
         }
 
@@ -626,7 +627,7 @@ class ELFFile(object):
         """
         if self._section_header_stringtable is None:
             raise ELFParseError("String Table not found")
-            
+
         name_offset = section_header['sh_name']
         return self._section_header_stringtable.get_string(name_offset)
 
@@ -662,6 +663,8 @@ class ELFFile(object):
             return StabSection(section_header, name, self)
         elif sectype == 'SHT_ARM_ATTRIBUTES':
             return ARMAttributesSection(section_header, name, self)
+        elif sectype == 'SHT_RISCV_ATTRIBUTES':
+            return RISCVAttributesSection(section_header, name, self)
         elif sectype == 'SHT_HASH':
             return self._make_elf_hash_section(section_header, name)
         elif sectype == 'SHT_GNU_HASH':

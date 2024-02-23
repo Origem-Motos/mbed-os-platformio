@@ -19,7 +19,12 @@ From Dan Crosta's README:
 """
 from __future__ import absolute_import
 
-from collections import Sequence, Iterator
+from future.utils import PY2
+
+if PY2:
+    from collections import Sequence, Iterator
+else:
+    from collections.abc import Sequence, Iterator
 from itertools import islice
 
 from future.backports.misc import count   # with step parameter on Py2.6
@@ -82,7 +87,7 @@ class newrange(Sequence):
         return (isinstance(other, newrange) and
                 (self._len == 0 == other._len or
                  (self._start, self._step, self._len) ==
-                 (other._start, other._step, self._len)))
+                 (other._start, other._step, other._len)))
 
     def __len__(self):
         return self._len
@@ -90,14 +95,17 @@ class newrange(Sequence):
     def index(self, value):
         """Return the 0-based position of integer `value` in
         the sequence this range represents."""
-        diff = value - self._start
+        try:
+            diff = value - self._start
+        except TypeError:
+            raise ValueError('%r is not in range' % value)
         quotient, remainder = divmod(diff, self._step)
         if remainder == 0 and 0 <= quotient < self._len:
             return abs(quotient)
         raise ValueError('%r is not in range' % value)
 
     def count(self, value):
-        """Return the number of ocurrences of integer `value`
+        """Return the number of occurrences of integer `value`
         in the sequence this range represents."""
         # a value can occur exactly zero or one times
         return int(value in self)
@@ -151,6 +159,9 @@ class range_iterator(Iterator):
 
     def __iter__(self):
         return self
+
+    def __next__(self):
+        return next(self._stepper)
 
     def next(self):
         return next(self._stepper)

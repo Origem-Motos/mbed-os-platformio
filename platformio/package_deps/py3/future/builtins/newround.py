@@ -1,7 +1,8 @@
 """
 ``python-future``: pure Python implementation of Python 3 round().
 """
- 
+
+from __future__ import division
 from future.utils import PYPY, PY26, bind_method
 
 # Use the decimal module for simplicity of implementation (and
@@ -12,13 +13,13 @@ from decimal import Decimal, ROUND_HALF_EVEN
 def newround(number, ndigits=None):
     """
     See Python 3 documentation: uses Banker's Rounding.
- 
+
     Delegates to the __round__ method if for some reason this exists.
- 
+
     If not, rounds a number to a given precision in decimal digits (default
     0 digits). This returns an int when called with one argument,
     otherwise the same type as the number. ndigits may be negative.
- 
+
     See the test_round method in future/tests/test_builtins.py for
     examples.
     """
@@ -28,27 +29,32 @@ def newround(number, ndigits=None):
         ndigits = 0
     if hasattr(number, '__round__'):
         return number.__round__(ndigits)
-    
-    if ndigits < 0:
-        raise NotImplementedError('negative ndigits not supported yet')
+
     exponent = Decimal('10') ** (-ndigits)
 
-    if PYPY:
-        # Work around issue #24: round() breaks on PyPy with NumPy's types
-        if 'numpy' in repr(type(number)):
-            number = float(number)
+    # Work around issue #24: round() breaks on PyPy with NumPy's types
+    # Also breaks on CPython with NumPy's specialized int types like uint64
+    if 'numpy' in repr(type(number)):
+        number = float(number)
 
-    if not PY26:
-        d = Decimal.from_float(number).quantize(exponent,
-                                            rounding=ROUND_HALF_EVEN)
+    if isinstance(number, Decimal):
+        d = number
     else:
-        d = from_float_26(number).quantize(exponent, rounding=ROUND_HALF_EVEN)
+        if not PY26:
+            d = Decimal.from_float(number)
+        else:
+            d = from_float_26(number)
+
+    if ndigits < 0:
+        result = newround(d / exponent) * exponent
+    else:
+        result = d.quantize(exponent, rounding=ROUND_HALF_EVEN)
 
     if return_int:
-        return int(d)
+        return int(result)
     else:
-        return float(d)
- 
+        return float(result)
+
 
 ### From Python 2.7's decimal.py. Only needed to support Py2.6:
 

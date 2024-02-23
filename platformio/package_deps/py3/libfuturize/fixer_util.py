@@ -9,11 +9,11 @@ python-modernize licence: BSD (from python-modernize/LICENSE)
 """
 
 from lib2to3.fixer_util import (FromImport, Newline, is_import,
-                                find_root, does_tree_import, Comma)
+                                find_root, does_tree_import,
+                                Call, Name, Comma)
 from lib2to3.pytree import Leaf, Node
-from lib2to3.pygram import python_symbols as syms, python_grammar
+from lib2to3.pygram import python_symbols as syms
 from lib2to3.pygram import token
-from lib2to3.fixer_util import (Node, Call, Name, syms, Comma, Number)
 import re
 
 
@@ -62,7 +62,7 @@ def Minus(prefix=None):
 
 def commatize(leafs):
     """
-    Accepts/turns: (Name, Name, ..., Name, Name) 
+    Accepts/turns: (Name, Name, ..., Name, Name)
     Returns/into: (Name, Comma, Name, Comma, ..., Name, Comma, Name)
     """
     new_leafs = []
@@ -116,7 +116,7 @@ def suitify(parent):
     """
     for node in parent.children:
         if node.type == syms.suite:
-            # already in the prefered format, do nothing
+            # already in the preferred format, do nothing
             return
 
     # One-liners have no suite node, we have to fake one up
@@ -272,7 +272,7 @@ def future_import2(feature, node):
     An alternative to future_import() which might not work ...
     """
     root = find_root(node)
-    
+
     if does_tree_import(u"__future__", feature, node):
         return
 
@@ -304,7 +304,7 @@ def parse_args(arglist, scheme):
     Parse a list of arguments into a dict
     """
     arglist = [i for i in arglist if i.type != token.COMMA]
-    
+
     ret_mapping = dict([(k, None) for k in scheme])
 
     for i, arg in enumerate(arglist):
@@ -338,7 +338,7 @@ def touch_import_top(package, name_to_import, node):
     Based on lib2to3.fixer_util.touch_import()
 
     Calling this multiple times adds the imports in reverse order.
-        
+
     Also adds "standard_library.install_aliases()" after "from future import
     standard_library".  This should probably be factored into another function.
     """
@@ -390,6 +390,7 @@ def touch_import_top(package, name_to_import, node):
                 break
         insert_pos = idx
 
+    children_hooks = []
     if package is None:
         import_ = Node(syms.import_name, [
             Leaf(token.NAME, u"import"),
@@ -413,9 +414,7 @@ def touch_import_top(package, name_to_import, node):
                                  ]
                                 )
             children_hooks = [install_hooks, Newline()]
-        else:
-            children_hooks = []
-        
+
         # FromImport(package, [Leaf(token.NAME, name_to_import, prefix=u" ")])
 
     children_import = [import_, Newline()]
@@ -443,9 +442,11 @@ def check_future_import(node):
             hasattr(node.children[1], 'value') and
             node.children[1].value == u'__future__'):
         return set()
-    node = node.children[3]
+    if node.children[3].type == token.LPAR:
+        node = node.children[4]
+    else:
+        node = node.children[3]
     # now node is the import_as_name[s]
-    # print(python_grammar.number2symbol[node.type])  # breaks sometimes
     if node.type == syms.import_as_names:
         result = set()
         for n in node.children:
@@ -504,15 +505,14 @@ def wrap_in_fn_call(fn_name, args, prefix=None):
 
     >>> wrap_in_fn_call("olddiv", (arg1, arg2))
     olddiv(arg1, arg2)
+
+    >>> wrap_in_fn_call("olddiv", [arg1, comma, arg2, comma, arg3])
+    olddiv(arg1, arg2, arg3)
     """
     assert len(args) > 0
-    if len(args) == 1:
-        newargs = args
-    elif len(args) == 2:
+    if len(args) == 2:
         expr1, expr2 = args
         newargs = [expr1, Comma(), expr2]
     else:
-        assert NotImplementedError('write me')
+        newargs = args
     return Call(Name(fn_name), newargs, prefix=prefix)
-
-

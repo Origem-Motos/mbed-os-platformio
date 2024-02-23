@@ -7,7 +7,6 @@
 # This code is in the public domain
 #-------------------------------------------------------------------------------
 from ..construct import Pass
-from ..common.py3compat import iteritems
 
 
 ENUM_DW_TAG = dict(
@@ -81,6 +80,10 @@ ENUM_DW_TAG = dict(
     DW_TAG_shared_type                 = 0x40,
     DW_TAG_type_unit                   = 0x41,
     DW_TAG_rvalue_reference_type       = 0x42,
+    DW_TAG_template_alias              = 0x43,
+    DW_TAG_coarray_type                = 0x44,
+    DW_TAG_generic_subrange            = 0x45,
+    DW_TAG_dynamic_type                = 0x46,    
     DW_TAG_atomic_type                 = 0x47,
     DW_TAG_call_site                   = 0x48,
     DW_TAG_call_site_parameter         = 0x49,
@@ -286,7 +289,10 @@ ENUM_DW_AT = dict(
     DW_AT_GNU_all_source_call_sites         = 0x2118,
     DW_AT_GNU_macros                        = 0x2119,
     DW_AT_GNU_deleted                       = 0x211a,
+    DW_AT_GNU_dwo_name                      = 0x2130,
     DW_AT_GNU_dwo_id                        = 0x2131,
+    DW_AT_GNU_ranges_base                   = 0x2132,
+    DW_AT_GNU_addr_base                     = 0x2133,
     DW_AT_GNU_pubnames                      = 0x2134,
     DW_AT_GNU_pubtypes                      = 0x2135,
     DW_AT_GNU_discriminator                 = 0x2136,
@@ -371,7 +377,7 @@ ENUM_DW_FORM = dict(
 )
 
 # Inverse mapping for ENUM_DW_FORM
-DW_FORM_raw2name = dict((v, k) for k, v in iteritems(ENUM_DW_FORM))
+DW_FORM_raw2name = dict((v, k) for k, v in ENUM_DW_FORM.items())
 
 # See http://www.airs.com/blog/archives/460
 DW_EH_encoding_flags = dict(
